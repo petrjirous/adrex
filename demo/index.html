@@ -5,31 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adrex – Demo</title>
 
-    <!-- Load widget (IIFE) — must be in <head> so init defers to DOMContentLoaded -->
     <script data-adrex-url="http://localhost:3100" src="/widget/dist/adrex.js"></script>
-    <script>adrex.setClientId('dev-test-key-1');</script>
+    <script>
+        adrex.setClientId('dev-test-key-1');
+    </script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; color: #1a1a1a; line-height: 1.5; }
-        .container { max-width: 720px; margin: 40px auto; padding: 0 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; color: #1a1a1a; line-height: 1.5; transition: background .2s, color .2s; }
+        .container { max-width: 820px; margin: 40px auto; padding: 0 20px; }
         header { margin-bottom: 32px; }
-        header h1 { font-size: 24px; font-weight: 700; }
+        header h1 { font-size: 26px; font-weight: 700; }
         header p { color: #555; margin-top: 4px; font-size: 14px; }
-        .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06); padding: 28px; margin-bottom: 24px; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06); padding: 28px; margin-bottom: 24px; transition: background .2s, box-shadow .2s; }
         .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
         .card .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
         .row { display: flex; gap: 12px; }
         .field { margin-bottom: 16px; flex: 1; }
         .field.narrow { flex: 0 0 120px; }
         .field label { display: block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 4px; }
-        .field input { width: 100%; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 15px; transition: border-color .15s, box-shadow .15s; outline: none; background: #fff; }
+        .field input { width: 100%; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 15px; transition: border-color .15s, box-shadow .15s, background .2s, color .2s; outline: none; background: #fff; color: #111; }
         .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
         .field input[readonly] { background: #f9fafb; color: #666; }
-        .badge { display: inline-block; font-size: 11px; background: #e8f0fe; color: #1a56db; padding: 2px 8px; border-radius: 4px; font-family: monospace; }
+        .badge { display: inline-block; font-size: 11px; background: #e8f0fe; color: #1a56db; padding: 2px 8px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
         .divider { height: 1px; background: #e5e7eb; margin: 20px 0; }
+        .theme-toggle { border: 1px solid #d0d5dd; background: #fff; color: #1a1a1a; padding: 8px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; transition: background .2s, color .2s, border-color .2s; margin-bottom: 16px; }
+        .theme-toggle:hover { background: #f3f4f6; }
+        .event-log { border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 10px; padding: 12px 14px; font-size: 12px; color: #374151; max-height: 140px; overflow: auto; }
+        .event-log strong { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin-bottom: 8px; }
+        .event-entry { padding: 6px 0; border-bottom: 1px dashed #e5e7eb; }
+        .event-entry:last-child { border-bottom: none; }
         footer { text-align: center; padding: 24px 0; font-size: 12px; color: #999; }
         footer a { color: #2563eb; text-decoration: none; }
+
+        [data-adrex-theme="dark"] body { background: #1a1a1e; color: #e0e0e0; }
+        [data-adrex-theme="dark"] header p { color: #a3a3a3; }
+        [data-adrex-theme="dark"] .card { background: #2a2a2e; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+        [data-adrex-theme="dark"] .field label { color: #c7c7c7; }
+        [data-adrex-theme="dark"] .field input { background: #1f1f23; border-color: #3a3a3f; color: #f3f4f6; }
+        [data-adrex-theme="dark"] .field input:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,.2); }
+        [data-adrex-theme="dark"] .field input[readonly] { background: #242428; color: #bdbdbd; }
+        [data-adrex-theme="dark"] .badge { background: #27314a; color: #9ec1ff; }
+        [data-adrex-theme="dark"] .divider { background: #3a3a3f; }
+        [data-adrex-theme="dark"] .theme-toggle { background: #1f1f23; border-color: #3a3a3f; color: #e5e7eb; }
+        [data-adrex-theme="dark"] .theme-toggle:hover { background: #26262b; }
+        [data-adrex-theme="dark"] .event-log { background: #1f1f23; border-color: #3a3a3f; color: #d1d5db; }
+        [data-adrex-theme="dark"] .event-log strong { color: #9ca3af; }
+        [data-adrex-theme="dark"] .event-entry { border-bottom-color: #3a3a3f; }
     </style>
 </head>
 <body>
@@ -37,10 +59,9 @@
 <div class="container">
     <header>
         <h1>Adrex</h1>
-        <p>Self-hosted Czech address autocomplete — backed by 3M+ RÚIAN addresses. Start typing below.</p>
+        <p>Self-hosted Czech address autocomplete with deep customization — callbacks, theming, and custom rendering.</p>
     </header>
 
-    <!-- Instance 1: Split fields -->
     <div class="card">
         <h2>Doručovací adresa</h2>
         <div class="subtitle">Separate fields — <span class="badge">adrex-instance-shipping</span></div>
@@ -68,7 +89,6 @@
         </div>
     </div>
 
-    <!-- Instance 2: Whole address -->
     <div class="card">
         <h2>Fakturační adresa</h2>
         <div class="subtitle">Single field with auto-fill — <span class="badge">adrex-instance-billing</span></div>
@@ -96,7 +116,6 @@
         </div>
     </div>
 
-    <!-- Instance 3: Default (no instance class) -->
     <div class="card">
         <h2>Rychlé hledání</h2>
         <div class="subtitle">Default instance — no <span class="badge">adrex-instance-*</span> class needed</div>
@@ -107,10 +126,65 @@
         </div>
     </div>
 
+    <div class="card">
+        <h2>Customization Showcase</h2>
+        <div class="subtitle">Theme toggle, callbacks, custom rendering</div>
+
+        <button class="theme-toggle" id="theme-toggle">Toggle Dark Mode</button>
+
+        <div class="field">
+            <label>Custom rendered (ZIP highlighted)</label>
+            <input type="text" class="adrex-whole-address adrex-instance-custom" placeholder="Type an address…" autocomplete="off">
+        </div>
+
+        <div class="event-log">
+            <strong>Event Log</strong>
+            <div id="log-entries"></div>
+        </div>
+    </div>
+
     <footer>
-        Powered by <a href="https://vdp.cuzk.gov.cz">RÚIAN</a> open data &middot; Meilisearch &middot; API running at <code>localhost:3100</code>
+        Copy <code>widget/dist/adrex.js</code> to your project — that's all you need.
     </footer>
 </div>
+
+<script>
+    adrex.configure({
+        onSelect: (suggestion, instance) => {
+            const log = document.getElementById('log-entries');
+            if (!log) return;
+            const entry = document.createElement('div');
+            entry.className = 'event-entry';
+            entry.textContent = `[${instance.id}] Selected: ${suggestion.values['adrex-whole-address']}`;
+            log.prepend(entry);
+        }
+    });
+
+    adrex.getInstance('custom').configure({
+        renderSuggestion: (suggestion, query) => {
+            const zip = suggestion.values['adrex-zip'] || '';
+            const address = suggestion.values['adrex-whole-address'] || '';
+            const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedQuery})`, 'gi');
+            const highlighted = address.replace(regex, '<span class="highlight">$1</span>');
+            return `
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${highlighted}</span>
+                    <span style="color:#666;font-size:12px;font-weight:600;">${zip}</span>
+                </div>
+            `;
+        }
+    });
+
+    const toggle = document.getElementById('theme-toggle');
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-adrex-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            adrex.configure({ theme: next });
+        });
+    }
+</script>
 
 </body>
 </html>

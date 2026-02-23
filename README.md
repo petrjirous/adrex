@@ -121,6 +121,101 @@ Add `adrex-instance-{name}` to group fields into separate form instances (e.g., 
 
 When the user selects a suggestion from the `adrex-whole-address` input, all other fields in the same instance are auto-filled.
 
+
+## Advanced Customization
+
+### Global configuration
+
+```javascript
+adrex.configure({
+  apiUrl: 'https://your-api.example.com',
+  apiKey: 'your-api-key',
+
+  // Behavior
+  debounce: 250,        // debounce delay in ms (default: 250)
+  minChars: 2,          // min chars before search (default: 2)
+  maxSuggestions: 8,    // max dropdown items (default: 8)
+
+  // Styling
+  theme: 'light',       // 'light' | 'dark' | 'none'
+  zIndex: 10000,        // dropdown z-index (default: 10000)
+
+  // Callbacks
+  onSelect: (suggestion, instance) => {},
+  onSuggest: (suggestions, query, instance) => {},
+  onError: (error, instance) => {},
+
+  // Custom rendering
+  renderSuggestion: (suggestion, query) => '<div>...</div>',
+  renderEmpty: () => '<div>No results</div>',
+  noResultsText: 'Adresa nenalezena',
+});
+```
+
+The `configure()` method can be called multiple times -- options are merged, not replaced. It can be called before or after page load.
+
+### Per-instance configuration
+
+Override global options for a specific form instance:
+
+```javascript
+adrex.getInstance('shipping').configure({
+  maxSuggestions: 5,
+  onSelect: (suggestion) => console.log('Shipping selected:', suggestion),
+});
+```
+
+Per-instance options take priority over global options. Unset options fall back to the global config, then to defaults.
+
+### Programmatic control
+
+```javascript
+const instance = adrex.getInstance('shipping');
+instance.search('Vodičkova');  // trigger search programmatically
+instance.open();               // open dropdown
+instance.close();              // close dropdown
+instance.destroy();            // remove all listeners, clean up
+```
+
+### Theming with CSS custom properties
+
+The dropdown is fully customizable via CSS custom properties:
+
+```css
+.adrex-dropdown {
+  --adrex-dropdown-bg: #ffffff;
+  --adrex-dropdown-border: 1px solid #cccccc;
+  --adrex-dropdown-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  --adrex-dropdown-radius: 4px;
+  --adrex-dropdown-max-height: 300px;
+  --adrex-dropdown-font-family: inherit;
+  --adrex-dropdown-font-size: 14px;
+  --adrex-dropdown-text-color: #333333;
+  --adrex-item-padding: 8px 12px;
+  --adrex-item-hover-bg: #e8f0fe;
+  --adrex-item-active-bg: #e8f0fe;
+  --adrex-highlight-color: inherit;
+  --adrex-highlight-weight: bold;
+  --adrex-empty-color: #777777;
+}
+```
+
+### Dark mode
+
+Toggle via JavaScript:
+
+```javascript
+adrex.configure({ theme: 'dark' });
+```
+
+Or via CSS/HTML -- add `data-adrex-theme="dark"` or class `adrex-theme-dark` to any ancestor element:
+
+```html
+<html data-adrex-theme="dark">
+```
+
+Set `theme: 'none'` to skip built-in styles entirely and bring your own CSS.
+
 ## API Reference
 
 ### POST /api/v1/address/autocomplete
@@ -260,7 +355,7 @@ RÚIAN CSV (3M rows) --> pipeline --> Meilisearch
 
 - **API**: TypeScript + Hono framework
 - **Search**: Meilisearch with typo tolerance and custom ranking
-- **Widget**: Vanilla TypeScript, Vite IIFE bundle (~5KB gzipped, ~2.3KB)
+ **Widget**: Vanilla TypeScript, Vite IIFE bundle (~3.3KB gzipped)
 - **Data pipeline**: Download ZIP, extract 6,258 CSVs, parse Windows-1250, transform, batch-index
 - **Coordinates**: JTSK (Czech national grid) to WGS84 conversion via proj4
 

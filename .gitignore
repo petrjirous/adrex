@@ -1,6 +1,10 @@
 node_modules/
 dist/
-widget/dist/
+
+# Widget dist is committed for easy distribution
+# Users can copy widget/dist/adrex.js directly
+!widget/dist/
+widget/dist/*.map
 # Data pipeline downloads
 data/*.csv
 data/*.zip

@@ -1,20 +1,38 @@
 .adrex-dropdown {
+  --adrex-dropdown-bg: #ffffff;
+  --adrex-dropdown-border: 1px solid #cccccc;
+  --adrex-dropdown-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  --adrex-dropdown-radius: 4px;
+  --adrex-dropdown-max-height: 300px;
+  --adrex-dropdown-font-family: inherit;
+  --adrex-dropdown-font-size: 14px;
+  --adrex-dropdown-text-color: #333333;
+
+  --adrex-item-padding: 8px 12px;
+  --adrex-item-hover-bg: #e8f0fe;
+  --adrex-item-active-bg: #e8f0fe;
+
+  --adrex-highlight-color: inherit;
+  --adrex-highlight-weight: bold;
+
+  --adrex-empty-color: #777777;
+
   position: absolute;
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  max-height: 300px;
+  background-color: var(--adrex-dropdown-bg);
+  border: var(--adrex-dropdown-border);
+  box-shadow: var(--adrex-dropdown-shadow);
+  max-height: var(--adrex-dropdown-max-height);
   overflow-y: auto;
   z-index: 10000;
-  border-radius: 4px;
+  border-radius: var(--adrex-dropdown-radius);
   box-sizing: border-box;
-  font-family: inherit;
-  font-size: 14px;
-  color: #333;
+  font-family: var(--adrex-dropdown-font-family);
+  font-size: var(--adrex-dropdown-font-size);
+  color: var(--adrex-dropdown-text-color);
 }
 
 .adrex-dropdown-item {
-  padding: 8px 12px;
+  padding: var(--adrex-item-padding);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -23,15 +41,31 @@
 
 .adrex-dropdown-item:hover,
 .adrex-dropdown-item.active {
-  background-color: #e8f0fe;
+  background-color: var(--adrex-item-hover-bg);
+}
+
+.adrex-dropdown-item.active {
+  background-color: var(--adrex-item-active-bg);
 }
 
 .adrex-dropdown-item .highlight {
-  font-weight: bold;
+  color: var(--adrex-highlight-color);
+  font-weight: var(--adrex-highlight-weight);
 }
 
 .adrex-dropdown-empty {
-  padding: 8px 12px;
-  color: #777;
+  padding: var(--adrex-item-padding);
+  color: var(--adrex-empty-color);
   font-style: italic;
+}
+
+[data-adrex-theme="dark"] .adrex-dropdown,
+.adrex-theme-dark .adrex-dropdown {
+  --adrex-dropdown-bg: #1e1e1e;
+  --adrex-dropdown-border: 1px solid #444444;
+  --adrex-dropdown-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  --adrex-dropdown-text-color: #e0e0e0;
+  --adrex-item-hover-bg: #2a2d2e;
+  --adrex-item-active-bg: #2a2d2e;
+  --adrex-empty-color: #999999;
 }
