@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adrex – Demo</title>
+
+    <!-- Load widget (IIFE) — must be in <head> so init defers to DOMContentLoaded -->
+    <script data-adrex-url="http://localhost:3100" src="/widget/dist/adrex.js"></script>
+    <script>adrex.setClientId('dev-test-key-1');</script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; color: #1a1a1a; line-height: 1.5; }
+        .container { max-width: 720px; margin: 40px auto; padding: 0 20px; }
+        header { margin-bottom: 32px; }
+        header h1 { font-size: 24px; font-weight: 700; }
+        header p { color: #555; margin-top: 4px; font-size: 14px; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06); padding: 28px; margin-bottom: 24px; }
+        .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .card .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+        .row { display: flex; gap: 12px; }
+        .field { margin-bottom: 16px; flex: 1; }
+        .field.narrow { flex: 0 0 120px; }
+        .field label { display: block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 4px; }
+        .field input { width: 100%; padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 15px; transition: border-color .15s, box-shadow .15s; outline: none; background: #fff; }
+        .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+        .field input[readonly] { background: #f9fafb; color: #666; }
+        .badge { display: inline-block; font-size: 11px; background: #e8f0fe; color: #1a56db; padding: 2px 8px; border-radius: 4px; font-family: monospace; }
+        .divider { height: 1px; background: #e5e7eb; margin: 20px 0; }
+        footer { text-align: center; padding: 24px 0; font-size: 12px; color: #999; }
+        footer a { color: #2563eb; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Adrex</h1>
+        <p>Self-hosted Czech address autocomplete — backed by 3M+ RÚIAN addresses. Start typing below.</p>
+    </header>
+
+    <!-- Instance 1: Split fields -->
+    <div class="card">
+        <h2>Doručovací adresa</h2>
+        <div class="subtitle">Separate fields — <span class="badge">adrex-instance-shipping</span></div>
+
+        <div class="row">
+            <div class="field" style="flex:2">
+                <label>Ulice</label>
+                <input type="text" class="adrex-street adrex-instance-shipping" placeholder="Začněte psát ulici…" autocomplete="off">
+            </div>
+            <div class="field narrow">
+                <label>Číslo</label>
+                <input type="text" class="adrex-number adrex-instance-shipping" placeholder="č.p." autocomplete="off">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label>Město</label>
+                <input type="text" class="adrex-city adrex-instance-shipping" placeholder="Obec" autocomplete="off">
+            </div>
+            <div class="field narrow">
+                <label>PSČ</label>
+                <input type="text" class="adrex-zip adrex-instance-shipping" placeholder="PSČ" autocomplete="off">
+            </div>
+        </div>
+    </div>
+
+    <!-- Instance 2: Whole address -->
+    <div class="card">
+        <h2>Fakturační adresa</h2>
+        <div class="subtitle">Single field with auto-fill — <span class="badge">adrex-instance-billing</span></div>
+
+        <div class="field">
+            <label>Celá adresa</label>
+            <input type="text" class="adrex-whole-address adrex-instance-billing" placeholder="Např. Vodičkova 30, Praha" autocomplete="off">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="row">
+            <div class="field">
+                <label>Ulice + číslo (auto)</label>
+                <input type="text" class="adrex-street-and-number adrex-instance-billing" readonly tabindex="-1">
+            </div>
+            <div class="field">
+                <label>Město (auto)</label>
+                <input type="text" class="adrex-city adrex-instance-billing" readonly tabindex="-1">
+            </div>
+            <div class="field narrow">
+                <label>PSČ (auto)</label>
+                <input type="text" class="adrex-zip adrex-instance-billing" readonly tabindex="-1">
+            </div>
+        </div>
+    </div>
+
+    <!-- Instance 3: Default (no instance class) -->
+    <div class="card">
+        <h2>Rychlé hledání</h2>
+        <div class="subtitle">Default instance — no <span class="badge">adrex-instance-*</span> class needed</div>
+
+        <div class="field">
+            <label>Adresa</label>
+            <input type="text" class="adrex-whole-address" placeholder="Hledejte libovolnou adresu v ČR…" autocomplete="off">
+        </div>
+    </div>
+
+    <footer>
+        Powered by <a href="https://vdp.cuzk.gov.cz">RÚIAN</a> open data &middot; Meilisearch &middot; API running at <code>localhost:3100</code>
+    </footer>
+</div>
+
+</body>
+</html>

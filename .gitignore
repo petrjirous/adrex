@@ -1,0 +1,25 @@
+node_modules/
+dist/
+widget/dist/
+# Data pipeline downloads
+data/*.csv
+data/*.zip
+data/*.xml
+data/CSV/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
