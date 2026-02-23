@@ -5,79 +5,131 @@ Self-hosted Czech address autocomplete powered by 3M+ RÚIAN address points.
 ## Features
 
 - Autocomplete API with sub-100ms response times
-- JavaScript widget — drop into any HTML form via CSS classes
+- JavaScript widget -- drop into any HTML form via CSS classes
 - 3,012,907 Czech address points from official RÚIAN registry
 - Full address validation endpoint
 - Docker Compose deployment
-- Zero external API dependencies — all data is local
+- Zero external API dependencies -- all data is local
 
 ## Quick Start
 
 ### Prerequisites
 
 - Docker + Docker Compose
-- Node.js 22+ (for development)
+- Node.js 22+
+- `unzip` (for extracting RÚIAN data)
 
-### 1. Start services
+### 1. Clone and install
 
-docker compose up -d
+```bash
+git clone https://github.com/your-username/adrex.git
+cd adrex
+npm install
+```
 
-### 2. Import addresses
+### 2. Start Meilisearch
 
+```bash
+docker compose up -d meilisearch
+```
+
+### 3. Import addresses (~3M records, takes a few minutes)
+
+```bash
 npm run pipeline
+```
 
-### 3. Try it
+### 4. Start the API server
 
+```bash
+npm run dev
+```
+
+### 5. Try it
+
+```bash
 curl -X POST http://localhost:3100/api/v1/address/autocomplete \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer dev-test-key-1" \
   -d '{"query": "Vodičkova 30 Praha"}'
+```
+
+Or open the demo page at `http://localhost:8080/demo/index.html` (requires a static file server in the project root).
+
+### Docker Compose (full stack)
+
+To run both Meilisearch and the API in Docker:
+
+```bash
+docker compose up -d
+```
+
+Then run the pipeline to import data (either locally or inside the container):
+
+```bash
+# Locally (requires Node.js + npm install)
+npm run pipeline
+
+# Or inside the container
+docker compose exec api node dist/pipeline.js
+```
 
 ## Widget Integration
 
 ### Basic setup
 
+```html
 <script data-adrex-url="https://your-api.example.com" src="path/to/adrex.js"></script>
 <script>adrex.setClientId('your-api-key');</script>
+```
 
 ### CSS Classes
 
-Available CSS classes:
+Add these classes to `<input>` elements to bind them to the autocomplete:
 
-- adrex-street: Target for street name
-- adrex-number: Target for house number
-- adrex-street-and-number: Combined street and number
-- adrex-city: Target for city name
-- adrex-city-extended: City name with city part (e.g., Praha - Nové Město)
-- adrex-zip: Target for ZIP code (PSČ)
-- adrex-whole-address: Main input for searching or full address representation
+| Class | Description |
+|---|---|
+| `adrex-street` | Street name |
+| `adrex-number` | House number (e.g. `2141/30`) |
+| `adrex-street-and-number` | Combined street and number |
+| `adrex-city` | City name |
+| `adrex-city-extended` | City with city part (e.g. `Praha - Nové Město`) |
+| `adrex-zip` | ZIP code (PSČ) |
+| `adrex-whole-address` | Full formatted address (primary search input) |
 
 ### Instance grouping
 
-- adrex-instance-{name}: Use this class to group fields into separate form instances (e.g., shipping and billing)
+Add `adrex-instance-{name}` to group fields into separate form instances (e.g., shipping and billing addresses on the same page).
 
 ### Example: Split fields
 
+```html
 <input class="adrex-street adrex-instance-shipping" placeholder="Street">
 <input class="adrex-number adrex-instance-shipping" placeholder="Number">
 <input class="adrex-city adrex-instance-shipping" placeholder="City">
 <input class="adrex-zip adrex-instance-shipping" placeholder="ZIP">
+```
 
 ### Example: Single field with auto-fill
 
+```html
 <input class="adrex-whole-address adrex-instance-billing" placeholder="Search address...">
 <input class="adrex-street-and-number adrex-instance-billing" readonly>
 <input class="adrex-city adrex-instance-billing" readonly>
 <input class="adrex-zip adrex-instance-billing" readonly>
+```
+
+When the user selects a suggestion from the `adrex-whole-address` input, all other fields in the same instance are auto-filled.
 
 ## API Reference
 
 ### POST /api/v1/address/autocomplete
 
 Request:
+
 ```json
 {
-  "query": "string",
+  "query": "Vodičkova 30 Praha",
   "limit": 10,
   "filter": [
     { "type": "MUNICIPALITY_CODE", "code": "554782" }
@@ -86,11 +138,26 @@ Request:
 ```
 
 Response:
+
 ```json
 {
-  "suggestions": [...],
-  "query": "Vodičkova 30",
-  "totalHits": 1,
+  "suggestions": [
+    {
+      "isWholeAddress": true,
+      "values": {
+        "adrex-street": "Vodičkova",
+        "adrex-number": "2141/30",
+        "adrex-street-and-number": "Vodičkova 2141/30",
+        "adrex-city": "Praha",
+        "adrex-city-extended": "Praha - Nové Město",
+        "adrex-zip": "11000",
+        "adrex-whole-address": "Vodičkova 2141/30, Nové Město, 11000 Praha"
+      },
+      "addressDetail": { ... }
+    }
+  ],
+  "query": "Vodičkova 30 Praha",
+  "totalHits": 1000,
   "processingTimeMs": 5
 }
 ```
@@ -98,74 +165,84 @@ Response:
 ### POST /api/v1/address/validate
 
 Request:
+
 ```json
 {
   "street": "Vodičkova",
   "houseNumber": "30",
   "city": "Praha",
-  "zip": "11000",
-  "wholeAddress": "Vodičkova 30, 11000 Praha"
+  "zip": "11000"
 }
 ```
 
 Response:
+
 ```json
 {
   "result": {
     "type": "HIT",
-    "addresses": [...]
+    "addresses": [{ ... }]
   },
   "processingTimeMs": 12
 }
 ```
 
-Types for `type`: `HIT`, `MANY`, `TOOMANY`, `NOTHING`, `INSUFFICIENT_DATA`.
+Result types: `HIT`, `MANY`, `TOOMANY`, `NOTHING`, `INSUFFICIENT_DATA`.
 
 ### GET /health
 
 No authentication required.
 
-Returns:
 ```json
-{
-  "status": "ok",
-  "timestamp": "2025-02-23T12:00:00.000Z",
-  "meili": "connected"
-}
+{ "status": "ok", "timestamp": "2025-02-23T12:00:00.000Z", "meili": "connected" }
 ```
 
 ### Authentication
 
-All endpoints except `/health` require a Bearer token or an `apiKey` query parameter. Configure valid keys via the `API_KEYS` environment variable (comma-separated).
+All endpoints except `/health` require a Bearer token or an `apiKey` query parameter.
+
+```
+Authorization: Bearer your-api-key
+```
+
+Or: `GET /api/v1/address/autocomplete?apiKey=your-api-key`
+
+Configure valid keys via the `API_KEYS` environment variable (comma-separated).
 
 ## Configuration
 
-Configure the application via environment variables or a `.env` file:
+Copy `.env.example` to `.env` and adjust as needed:
 
-- `MEILI_URL`: Meilisearch connection string (default: http://localhost:7700)
-- `MEILI_MASTER_KEY`: Master key for Meilisearch authentication
-- `API_PORT`: Port for the API server (default: 3100)
-- `API_HOST`: Host for the API server (default: 0.0.0.0)
-- `API_KEYS`: Comma-separated list of valid API keys
-- `RUIAN_DATA_DIR`: Directory for storing RÚIAN data (default: ./data)
-- `RUIAN_CSV_URL`: URL for RÚIAN CSV download (default: auto — resolves latest from ČÚZK)
-- `RATE_LIMIT_MAX`: Max requests per window (default: 100)
-- `RATE_LIMIT_WINDOW_MS`: Rate limit window in milliseconds (default: 60000)
+| Variable | Default | Description |
+|---|---|---|
+| `MEILI_URL` | `http://localhost:7700` | Meilisearch connection URL |
+| `MEILI_MASTER_KEY` | `adrex-dev-master-key` | Meilisearch master key |
+| `API_PORT` | `3100` | API server port |
+| `API_HOST` | `0.0.0.0` | API server bind address |
+| `API_KEYS` | `dev-test-key-1` | Comma-separated valid API keys |
+| `RUIAN_DATA_DIR` | `./data` | Directory for RÚIAN downloads |
+| `RUIAN_CSV_URL` | `auto` | RÚIAN CSV URL (`auto` resolves latest from ČÚZK) |
+| `RATE_LIMIT_MAX` | `100` | Max requests per window |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window (ms) |
 
 ## Data Source
 
-- RÚIAN (Registr územní identifikace, adres a nemovitostí): Official Czech government address registry
-- 3,012,907 address points provided under CC-BY 4.0 license
-- Updated monthly by ČÚZK
-- The pipeline automatically resolves and downloads the latest data release
+Address data comes from [RÚIAN](https://vdp.cuzk.gov.cz) (Registr územní identifikace, adres a nemovitostí), the official Czech government address registry maintained by ČÚZK.
+
+- 3,012,907 address points
+- Updated monthly
+- Licensed under CC-BY 4.0 (attribution: ČÚZK)
+- The pipeline auto-resolves and downloads the latest release
+
+The `RUIAN_CSV_URL=auto` setting (default) scrapes the current download link from ČÚZK's website, so the pipeline always fetches the latest data without manual URL updates.
 
 ## Development
 
 ```bash
 npm install
 cd widget && npm install && cd ..
-npm run dev          # API development server with hot reload
-npm run widget:dev   # Widget development server
+npm run dev          # API dev server with hot reload
+npm run widget:dev   # Widget dev server
 npm run typecheck    # Type checking
 npm run build        # Build API
 npm run widget:build # Build widget
@@ -173,12 +250,20 @@ npm run widget:build # Build widget
 
 ## Architecture
 
-- API: TypeScript using the Hono framework
-- Search: Powered by Meilisearch for fast typo-tolerant lookup
-- Widget: Vanilla TypeScript bundled into a ~5KB gzipped IIFE using Vite
-- Data: Pipeline processes RÚIAN CSV files, transforms them, and indexes into Meilisearch
-- Coordinates: Handles conversion from JTSK (Czech national grid) to WGS84 via proj4
+```
+RÚIAN CSV (3M rows) --> pipeline --> Meilisearch
+                                         |
+                        Hono API  <------+
+                           |
+                     adrex.js widget (browser)
+```
+
+- **API**: TypeScript + Hono framework
+- **Search**: Meilisearch with typo tolerance and custom ranking
+- **Widget**: Vanilla TypeScript, Vite IIFE bundle (~5KB gzipped, ~2.3KB)
+- **Data pipeline**: Download ZIP, extract 6,258 CSVs, parse Windows-1250, transform, batch-index
+- **Coordinates**: JTSK (Czech national grid) to WGS84 conversion via proj4
 
 ## License
 
-MIT
+[MIT](LICENSE)

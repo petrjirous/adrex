@@ -6,6 +6,9 @@
   "keywords": ["address", "autocomplete", "czech", "ruian", "meilisearch", "widget"],
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsup src/server.ts src/pipeline.ts --format esm --dts",
