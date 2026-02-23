@@ -52,6 +52,47 @@
         [data-adrex-theme="dark"] .event-log { background: #1f1f23; border-color: #3a3a3f; color: #d1d5db; }
         [data-adrex-theme="dark"] .event-log strong { color: #9ca3af; }
         [data-adrex-theme="dark"] .event-entry { border-bottom-color: #3a3a3f; }
+
+        /* Playground Styles */
+        .playground-card h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
+        .playground-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; row-gap: 20px; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        .control-label { font-size: 12px; font-weight: 500; color: #374151; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        
+        .color-input-wrapper { display: flex; align-items: center; gap: 8px; }
+        input[type="color"] { -webkit-appearance: none; border: none; width: 32px; height: 32px; padding: 0; background: none; cursor: pointer; border-radius: 6px; overflow: hidden; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid #d1d5db; border-radius: 6px; }
+        .color-value { font-size: 13px; color: #6b7280; font-family: monospace; }
+
+        .range-wrapper { display: flex; align-items: center; gap: 12px; }
+        input[type="range"] { flex: 1; accent-color: #2563eb; }
+        .range-value { font-size: 13px; font-weight: 500; color: #111; min-width: 32px; text-align: right; font-feature-settings: "tnum"; }
+
+        .presets-row { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+        .preset-btn { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid #d1d5db; background: #fff; color: #374151; cursor: pointer; transition: all .2s; }
+        .preset-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+        .preset-btn.active { background: #eff6ff; border-color: #2563eb; color: #1d4ed8; }
+
+        .copy-btn { width: 100%; padding: 10px; background: #111; color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: background .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .copy-btn:hover { background: #333; }
+        .copy-toast { opacity: 0; transition: opacity .3s; color: #059669; font-size: 13px; font-weight: 500; margin-left: 12px; }
+        .copy-toast.visible { opacity: 1; }
+
+        [data-adrex-theme="dark"] .playground-card h3 { color: #9ca3af; border-bottom-color: #374151; }
+        [data-adrex-theme="dark"] .control-label { color: #d1d5db; }
+        [data-adrex-theme="dark"] input[type="color"]::-webkit-color-swatch { border-color: #4b5563; }
+        [data-adrex-theme="dark"] .color-value { color: #9ca3af; }
+        [data-adrex-theme="dark"] .range-value { color: #e5e7eb; }
+        [data-adrex-theme="dark"] .preset-btn { background: #1f1f23; border-color: #374151; color: #d1d5db; }
+        [data-adrex-theme="dark"] .preset-btn:hover { background: #26262b; border-color: #4b5563; }
+        [data-adrex-theme="dark"] .preset-btn.active { background: #1e3a8a; border-color: #3b82f6; color: #93c5fd; }
+        [data-adrex-theme="dark"] .copy-btn { background: #fff; color: #000; }
+        [data-adrex-theme="dark"] .copy-btn:hover { background: #e5e7eb; }
+        [data-adrex-theme="dark"] .control-group input[type="text"],
+        [data-adrex-theme="dark"] .control-group select { background: #1f1f23; border-color: #3a3a3f; color: #f3f4f6; }
+        [data-adrex-theme="dark"] .control-group input[type="text"]:focus,
+        [data-adrex-theme="dark"] .control-group select:focus { border-color: #60a5fa; outline: none; }
     </style>
 </head>
 <body>
@@ -143,6 +184,158 @@
         </div>
     </div>
 
+    <div class="card playground-card">
+        <h2>Style Playground</h2>
+        <div class="subtitle">Tweak every CSS custom property and config option — changes apply live</div>
+
+        <div class="presets-row">
+            <button class="preset-btn" onclick="applyPreset('default')">Default</button>
+            <button class="preset-btn" onclick="applyPreset('dark')">Dark</button>
+            <button class="preset-btn" onclick="applyPreset('blue')">Brand Blue</button>
+            <button class="preset-btn" onclick="applyPreset('warm')">Warm</button>
+        </div>
+
+        <h3>Dropdown Appearance</h3>
+        <div class="playground-grid">
+            <div class="control-group">
+                <label class="control-label">--adrex-dropdown-bg</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="p-bg" value="#ffffff">
+                    <span class="color-value">#ffffff</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-dropdown-text-color</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="p-text" value="#333333">
+                    <span class="color-value">#333333</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-dropdown-border</label>
+                <input type="text" id="p-border" value="1px solid #cccccc">
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-dropdown-shadow</label>
+                <input type="text" id="p-shadow" value="0 4px 6px rgba(0,0,0,0.1)">
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-dropdown-radius</label>
+                <div class="range-wrapper">
+                    <input type="range" id="p-radius" min="0" max="24" value="4">
+                    <span class="range-value">4px</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-dropdown-font-size</label>
+                <div class="range-wrapper">
+                    <input type="range" id="p-font" min="10" max="20" value="14">
+                    <span class="range-value">14px</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-dropdown-max-height</label>
+                <div class="range-wrapper">
+                    <input type="range" id="p-height" min="100" max="500" value="300" step="10">
+                    <span class="range-value">300px</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Item Styling</h3>
+        <div class="playground-grid">
+            <div class="control-group">
+                <label class="control-label">--adrex-item-hover-bg</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="p-hover-bg" value="#e8f0fe">
+                    <span class="color-value">#e8f0fe</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-item-active-bg</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="p-active-bg" value="#e8f0fe">
+                    <span class="color-value">#e8f0fe</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-item-padding</label>
+                <input type="text" id="p-padding" value="8px 12px">
+            </div>
+        </div>
+
+        <h3>Highlight & Empty</h3>
+        <div class="playground-grid">
+            <div class="control-group">
+                <label class="control-label">--adrex-highlight-color</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="p-highlight-color" value="#333333">
+                    <span class="color-value">inherit</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-highlight-weight</label>
+                <select id="p-highlight-weight" style="width:100%; padding:8px; border-radius:6px; border:1px solid #d0d5dd;">
+                    <option value="normal">Normal</option>
+                    <option value="600">Semi-Bold (600)</option>
+                    <option value="bold" selected>Bold</option>
+                    <option value="800">Extra Bold (800)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label class="control-label">--adrex-empty-color</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="p-empty-color" value="#777777">
+                    <span class="color-value">#777777</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Behavior Config</h3>
+        <div class="playground-grid">
+            <div class="control-group">
+                <label class="control-label">debounce (ms)</label>
+                <div class="range-wrapper">
+                    <input type="range" id="c-debounce" min="50" max="1000" step="50" value="250">
+                    <span class="range-value">250</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">minChars</label>
+                <div class="range-wrapper">
+                    <input type="range" id="c-minChars" min="1" max="5" value="2">
+                    <span class="range-value">2</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">maxSuggestions</label>
+                <div class="range-wrapper">
+                    <input type="range" id="c-maxSuggestions" min="1" max="20" value="8">
+                    <span class="range-value">8</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label class="control-label">noResultsText</label>
+                <input type="text" id="c-noResultsText" value="Adresa nenalezena">
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+            <label>Live Preview (adrex-instance-playground)</label>
+            <input type="text" class="adrex-whole-address adrex-instance-playground" placeholder="Type here to preview your customization…" autocomplete="off">
+        </div>
+
+        <div style="display:flex; align-items:center; margin-top:20px;">
+            <button id="copy-css" class="copy-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy CSS Snippet
+            </button>
+            <span id="copy-toast" class="copy-toast">Copied to clipboard!</span>
+        </div>
+    </div>
+
     <footer>
         Copy <code>widget/dist/adrex.js</code> to your project — that's all you need.
     </footer>
@@ -184,6 +377,249 @@
             adrex.configure({ theme: next });
         });
     }
+</script>
+
+<script>
+    // --- Playground Logic ---
+
+    const DEFAULTS = {
+        '--adrex-dropdown-bg': '#ffffff',
+        '--adrex-dropdown-text-color': '#333333',
+        '--adrex-dropdown-border': '1px solid #cccccc',
+        '--adrex-dropdown-shadow': '0 4px 6px rgba(0,0,0,0.1)',
+        '--adrex-dropdown-radius': '4px',
+        '--adrex-dropdown-font-size': '14px',
+        '--adrex-dropdown-max-height': '300px',
+        '--adrex-item-hover-bg': '#e8f0fe',
+        '--adrex-item-active-bg': '#e8f0fe',
+        '--adrex-item-padding': '8px 12px',
+        '--adrex-highlight-color': 'inherit',
+        '--adrex-highlight-weight': 'bold',
+        '--adrex-empty-color': '#777777'
+    };
+
+    const CONFIG_DEFAULTS = {
+        debounce: 250,
+        minChars: 2,
+        maxSuggestions: 8,
+        noResultsText: 'Adresa nenalezena'
+    };
+
+    let currentStyles = { ...DEFAULTS };
+    let currentConfig = { ...CONFIG_DEFAULTS };
+
+    // DOM Elements
+    const inputs = {
+        '--adrex-dropdown-bg': document.getElementById('p-bg'),
+        '--adrex-dropdown-text-color': document.getElementById('p-text'),
+        '--adrex-dropdown-border': document.getElementById('p-border'),
+        '--adrex-dropdown-shadow': document.getElementById('p-shadow'),
+        '--adrex-dropdown-radius': document.getElementById('p-radius'),
+        '--adrex-dropdown-font-size': document.getElementById('p-font'),
+        '--adrex-dropdown-max-height': document.getElementById('p-height'),
+        '--adrex-item-hover-bg': document.getElementById('p-hover-bg'),
+        '--adrex-item-active-bg': document.getElementById('p-active-bg'),
+        '--adrex-item-padding': document.getElementById('p-padding'),
+        '--adrex-highlight-color': document.getElementById('p-highlight-color'),
+        '--adrex-highlight-weight': document.getElementById('p-highlight-weight'),
+        '--adrex-empty-color': document.getElementById('p-empty-color')
+    };
+
+    const configInputs = {
+        debounce: document.getElementById('c-debounce'),
+        minChars: document.getElementById('c-minChars'),
+        maxSuggestions: document.getElementById('c-maxSuggestions'),
+        noResultsText: document.getElementById('c-noResultsText')
+    };
+
+    // Helper: Update UI display values
+    function updateDisplay(id, val) {
+        const el = document.getElementById(id).nextElementSibling;
+        if (el && (el.classList.contains('color-value') || el.classList.contains('range-value'))) {
+            // Special handling for px suffix
+            if (id === 'p-radius' || id === 'p-font' || id === 'p-height') {
+                el.textContent = val + (val.toString().endsWith('px') ? '' : 'px');
+            } else {
+                el.textContent = val;
+            }
+        }
+    }
+
+    // Helper: Apply styles to all existing and future dropdowns
+    function applyStyles() {
+        // Apply to existing
+        document.querySelectorAll('.adrex-dropdown').forEach(el => {
+            Object.entries(currentStyles).forEach(([prop, val]) => {
+                el.style.setProperty(prop, val);
+            });
+        });
+    }
+
+    // Config updater
+    function updateConfig() {
+        const instance = adrex.getInstance('playground');
+        if (instance) {
+            instance.configure(currentConfig);
+        }
+    }
+
+    // Event Listeners for CSS inputs
+    Object.entries(inputs).forEach(([prop, input]) => {
+        if (!input) return; // guard if element not found yet
+        input.addEventListener('input', (e) => {
+            let val = e.target.value;
+            // Add px if needed for ranges
+            if (prop === '--adrex-dropdown-radius' || prop === '--adrex-dropdown-font-size' || prop === '--adrex-dropdown-max-height') {
+                val += 'px';
+            }
+            currentStyles[prop] = val;
+            updateDisplay(input.id, e.target.value); // Pass raw value for display logic
+            applyStyles();
+        });
+    });
+
+    // Event Listeners for Config inputs
+    Object.entries(configInputs).forEach(([key, input]) => {
+        if (!input) return; // guard
+        input.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (input.type === 'range') val = parseInt(val, 10);
+            currentConfig[key] = val;
+            
+            // Update display for ranges
+            const next = input.nextElementSibling;
+            if (next && next.classList.contains('range-value')) {
+                next.textContent = val;
+            }
+            
+            updateConfig();
+        });
+    });
+
+    // MutationObserver to catch new dropdowns
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1 && node.classList.contains('adrex-dropdown')) {
+                    Object.entries(currentStyles).forEach(([prop, val]) => {
+                        node.style.setProperty(prop, val);
+                    });
+                }
+            });
+        });
+    });
+    observer.observe(document.body, { childList: true });
+
+
+    // Presets
+    window.applyPreset = function(name) {
+        // Reset active state
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.preset-btn[onclick*="'${name}'"]`).classList.add('active');
+
+        // Reset config to defaults
+        currentConfig = { ...CONFIG_DEFAULTS };
+        
+        // Reset styles based on preset
+        if (name === 'default') {
+            currentStyles = { ...DEFAULTS };
+            adrex.configure({ theme: 'light' });
+        } else if (name === 'dark') {
+            adrex.configure({ theme: 'dark' });
+            currentStyles = {
+                ...DEFAULTS,
+                '--adrex-dropdown-bg': '#1e1e1e',
+                '--adrex-dropdown-border': '1px solid #444444',
+                '--adrex-dropdown-shadow': '0 4px 6px rgba(0,0,0,0.3)',
+                '--adrex-dropdown-text-color': '#e0e0e0',
+                '--adrex-item-hover-bg': '#2a2d2e',
+                '--adrex-item-active-bg': '#2a2d2e',
+                '--adrex-empty-color': '#999999'
+            };
+        } else if (name === 'blue') {
+            adrex.configure({ theme: 'light' });
+            currentStyles = {
+                ...DEFAULTS,
+                '--adrex-dropdown-bg': '#eef4ff',
+                '--adrex-item-hover-bg': '#3b82f6',
+                '--adrex-dropdown-border': '1px solid #3b82f6',
+                '--adrex-dropdown-radius': '12px',
+                '--adrex-dropdown-text-color': '#1e3a8a',
+                '--adrex-highlight-color': '#1e40af'
+            };
+        } else if (name === 'warm') {
+            adrex.configure({ theme: 'light' });
+            currentStyles = {
+                ...DEFAULTS,
+                '--adrex-dropdown-bg': '#fdf6ec',
+                '--adrex-item-hover-bg': '#f59e0b',
+                '--adrex-dropdown-border': '1px solid #d97706',
+                '--adrex-dropdown-radius': '0px',
+                '--adrex-dropdown-text-color': '#78350f',
+                '--adrex-highlight-color': '#92400e'
+            };
+        }
+
+        // Sync UI
+        Object.entries(inputs).forEach(([prop, input]) => {
+            if (!input) return;
+            let val = currentStyles[prop];
+            // Strip px for ranges
+            if (prop === '--adrex-dropdown-radius' || prop === '--adrex-dropdown-font-size' || prop === '--adrex-dropdown-max-height') {
+                input.value = parseInt(val, 10);
+                updateDisplay(input.id, parseInt(val, 10));
+            } else {
+                input.value = val;
+                // For color inputs, if val is 'inherit', show black
+                if (input.type === 'color') {
+                     if (val === 'inherit') {
+                         input.value = '#333333';
+                         updateDisplay(input.id, 'inherit');
+                     } else {
+                         updateDisplay(input.id, val);
+                     }
+                } else {
+                    updateDisplay(input.id, val);
+                }
+            }
+        });
+
+        // Sync Config UI
+        Object.entries(configInputs).forEach(([key, input]) => {
+            if (!input) return;
+            input.value = currentConfig[key];
+            const next = input.nextElementSibling;
+            if (next && next.classList.contains('range-value')) {
+                next.textContent = currentConfig[key];
+            }
+        });
+
+        applyStyles();
+        updateConfig();
+    };
+
+    // Copy CSS
+    document.getElementById('copy-css').addEventListener('click', () => {
+        let css = `.adrex-dropdown {\n`;
+        let hasChanges = false;
+        
+        Object.entries(currentStyles).forEach(([prop, val]) => {
+            if (val !== DEFAULTS[prop]) {
+                css += `  ${prop}: ${val};\n`;
+                hasChanges = true;
+            }
+        });
+        
+        css += `}`;
+
+        if (!hasChanges) css = `/* No changes from default styles */`;
+
+        navigator.clipboard.writeText(css).then(() => {
+            const toast = document.getElementById('copy-toast');
+            toast.classList.add('visible');
+            setTimeout(() => toast.classList.remove('visible'), 2000);
+        });
+    });
 </script>
 
 </body>
