@@ -410,6 +410,79 @@ Visit `https://adrex.yourdomain.com` to see the demo page.
 - **Logs**: `docker compose -f docker-compose.prod.yml logs -f`
 - **Re-index**: Run the pipeline command again -- it will re-download and re-index
 
+
+## Kubernetes Deployment
+
+For production clusters, adrex ships with ready-to-use Kubernetes manifests in [`k8s/`](k8s/).
+
+### Architecture
+
+```
+Ingress (TLS) --> Service --> API Deployment (2+ replicas, stateless)
+                                   |
+                              Meilisearch StatefulSet (1 replica, 20Gi PVC)
+                                   ^
+                              Pipeline Job (one-off, indexes 3M records)
+```
+
+### Quick start
+
+```bash
+# 1. Build and push the API image to your registry
+docker build -t registry.example.com/adrex-api:1.0.0 .
+docker push registry.example.com/adrex-api:1.0.0
+
+# 2. Update image references in api-deployment.yaml and pipeline-job.yaml
+
+# 3. Generate secrets and update the secret manifests
+openssl rand -base64 32  # for MEILI_MASTER_KEY
+# Edit k8s/meilisearch-secret.yaml and k8s/api-secret.yaml
+
+# 4. Apply all manifests
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/meilisearch-secret.yaml
+kubectl apply -f k8s/api-secret.yaml
+kubectl apply -f k8s/meilisearch-deployment.yaml
+kubectl apply -f k8s/meilisearch-service.yaml
+kubectl apply -f k8s/api-deployment.yaml
+kubectl apply -f k8s/api-service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+# 5. Import addresses (~10 min)
+kubectl apply -f k8s/pipeline-job.yaml
+kubectl -n adrex logs -f job/adrex-pipeline
+
+# 6. Verify
+kubectl -n adrex get pods
+```
+
+### What's included
+
+| Manifest | Resource | Notes |
+|---|---|---|
+| `namespace.yaml` | Namespace `adrex` | Isolates all resources |
+| `meilisearch-deployment.yaml` | StatefulSet | 1 replica, 20Gi PVC, startup/liveness/readiness probes |
+| `meilisearch-service.yaml` | ClusterIP Service | Internal access on port 7700 |
+| `meilisearch-secret.yaml` | Secret | `MEILI_MASTER_KEY` (base64-encoded) |
+| `api-deployment.yaml` | Deployment | 2 replicas, liveness/readiness probes, resource limits |
+| `api-service.yaml` | ClusterIP Service | Internal access on port 80 |
+| `api-secret.yaml` | Secret | `API_KEYS` (base64-encoded, comma-separated) |
+| `ingress.yaml` | Ingress | nginx-compatible, TLS-ready (uncomment `tls` block) |
+| `pipeline-job.yaml` | Job | One-off data import, auto-cleanup after 1h |
+
+### Scaling and updates
+
+```bash
+# Scale API horizontally
+kubectl -n adrex scale deployment adrex-api --replicas=4
+
+# Re-index with fresh RUIAN data
+kubectl delete job -n adrex adrex-pipeline
+kubectl apply -f k8s/pipeline-job.yaml
+```
+
+See [`k8s/README.md`](k8s/README.md) for full details, TLS configuration, and monitoring.
+
 ## Development
 
 ```bash
