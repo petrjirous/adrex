@@ -1,0 +1,22 @@
+{$DOMAIN} {
+    # API endpoints
+    handle /api/* {
+        reverse_proxy api:3100
+    }
+    handle /health {
+        reverse_proxy api:3100
+    }
+
+    # Widget JS files
+    handle /widget/* {
+        root * /srv
+        file_server
+    }
+
+    # Demo page (catch-all)
+    handle {
+        root * /srv/demo
+        try_files {path} /index.html
+        file_server
+    }
+}

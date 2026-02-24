@@ -331,6 +331,85 @@ Address data comes from [RÚIAN](https://vdp.cuzk.gov.cz) (Registr územní iden
 
 The `RUIAN_CSV_URL=auto` setting (default) scrapes the current download link from ČÚZK's website, so the pipeline always fetches the latest data without manual URL updates.
 
+## Production Deployment
+
+Deploy with Docker Compose and Caddy (auto-HTTPS).
+
+### 1. Prepare the server
+
+On your VPS (Ubuntu/Debian):
+
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+# Log out and back in, then verify:
+docker --version
+```
+
+### 2. DNS
+
+Create an A record pointing your domain to the server IP:
+
+```
+adrex.yourdomain.com  →  A  →  YOUR_SERVER_IP
+```
+
+### 3. Clone and configure
+
+```bash
+git clone https://github.com/your-username/adrex.git
+cd adrex
+cp .env.prod.example .env.prod
+```
+
+Edit `.env.prod`:
+
+```env
+DOMAIN=adrex.yourdomain.com
+MEILI_MASTER_KEY=<generate with: openssl rand -base64 32>
+API_KEYS=demo-public-key,your-private-key
+```
+
+### 4. Build and start
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Caddy will automatically obtain a TLS certificate from Let's Encrypt.
+
+### 5. Import addresses
+
+```bash
+docker compose -f docker-compose.prod.yml exec api node dist/pipeline.js
+```
+
+This downloads ~60 MB of RÚIAN data, extracts 6,258 CSVs, and indexes 3M+ addresses into Meilisearch. Takes 10-15 minutes depending on server speed.
+
+### 6. Verify
+
+```bash
+# Health check
+curl https://adrex.yourdomain.com/health
+
+# Test autocomplete
+curl -X POST https://adrex.yourdomain.com/api/v1/address/autocomplete \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer demo-public-key' \
+  -d '{"query": "Vodičkova 30 Praha"}'
+```
+
+Visit `https://adrex.yourdomain.com` to see the demo page.
+
+### Production notes
+
+- **HTTPS**: Caddy handles TLS certificates automatically via Let's Encrypt
+- **Persistence**: Meilisearch data is stored in a Docker volume (`meili_data`) -- survives container restarts
+- **Updates**: `git pull && docker compose -f docker-compose.prod.yml up -d --build`
+- **Logs**: `docker compose -f docker-compose.prod.yml logs -f`
+- **Re-index**: Run the pipeline command again -- it will re-download and re-index
+
 ## Development
 
 ```bash
@@ -352,7 +431,6 @@ RÚIAN CSV (3M rows) --> pipeline --> Meilisearch
                            |
                      adrex.js widget (browser)
 ```
-
 - **API**: TypeScript + Hono framework
 - **Search**: Meilisearch with typo tolerance and custom ranking
 - **Widget**: Vanilla TypeScript, Vite IIFE bundle (~3.3KB gzipped)
@@ -364,6 +442,10 @@ RÚIAN CSV (3M rows) --> pipeline --> Meilisearch
 - **[Tutorial](TUTORIAL.md)** -- Step-by-step guide from zero to production
 - **[Kubernetes Deployment](k8s/README.md)** -- Production K8s manifests and instructions
 - **[Contributing](CONTRIBUTING.md)** -- Development setup and PR process
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and PR process.
 
 ## License
 

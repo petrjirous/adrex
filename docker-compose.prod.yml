@@ -1,0 +1,45 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./demo:/srv/demo
+      - ./widget/dist:/srv/widget/dist
+      - caddy_data:/data
+      - caddy_config:/config
+    env_file: .env.prod
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      MEILI_URL: http://meilisearch:7700
+    env_file: .env.prod
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    environment:
+      MEILI_ENV: production
+    env_file: .env.prod
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  meili_data:
+  caddy_data:
+  caddy_config:

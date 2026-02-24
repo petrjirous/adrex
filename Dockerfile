@@ -8,7 +8,7 @@ RUN npx tsup src/server.ts src/pipeline.ts --format esm
 
 FROM node:22-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/dist ./dist/
 COPY --from=builder /app/node_modules ./node_modules/
 COPY --from=builder /app/package.json ./

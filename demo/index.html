@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adrex – Demo</title>
 
-    <!-- DEV ONLY: localhost URL and dev-test-key are for local development. -->
-    <!-- In production, replace with your API URL and a real API key. -->
-    <script data-adrex-url="http://localhost:3100" src="/widget/dist/adrex.js"></script>
+    <script src="/widget/dist/adrex.js"></script>
     <script>
-        adrex.setClientId('dev-test-key-1');
+        // Auto-detect environment: dev uses localhost API, prod uses same origin
+        (function() {
+            var isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (isDev) adrex.configure({ apiUrl: 'http://localhost:3100' });
+            adrex.setClientId(isDev ? 'dev-test-key-1' : 'demo-public-key');
+        })();
     </script>
 
     <style>
