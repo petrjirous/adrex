@@ -2,6 +2,8 @@
 
 Self-hosted Czech address autocomplete powered by 3M+ RÚIAN address points.
 
+> **[Live Demo →](https://adrex.petrjirous.cz)** — try it now, no setup needed. Explore the interactive Style Playground, dark mode, and multiple form integration examples.
+
 ## Features
 
 - Autocomplete API with sub-100ms response times
@@ -22,7 +24,7 @@ Self-hosted Czech address autocomplete powered by 3M+ RÚIAN address points.
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-username/adrex.git
+git clone https://github.com/petrjirous/adrex.git
 cd adrex
 npm install
 ```
@@ -306,8 +308,6 @@ Configure valid keys via the `API_KEYS` environment variable (comma-separated).
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust as needed:
-
 | Variable | Default | Description |
 |---|---|---|
 | `MEILI_URL` | `http://localhost:7700` | Meilisearch connection URL |
@@ -358,7 +358,7 @@ adrex.yourdomain.com  →  A  →  YOUR_SERVER_IP
 ### 3. Clone and configure
 
 ```bash
-git clone https://github.com/your-username/adrex.git
+git clone https://github.com/petrjirous/adrex.git
 cd adrex
 cp .env.prod.example .env.prod
 ```

@@ -7,11 +7,11 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR-USERNAME/adrex.git"
+    "url": "https://github.com/petrjirous/adrex.git"
   },
-  "homepage": "https://github.com/YOUR-USERNAME/adrex#readme",
+  "homepage": "https://github.com/petrjirous/adrex#readme",
   "bugs": {
-    "url": "https://github.com/YOUR-USERNAME/adrex/issues"
+    "url": "https://github.com/petrjirous/adrex/issues"
   },
   "author": "",
   "type": "module",
