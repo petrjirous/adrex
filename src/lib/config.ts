@@ -3,13 +3,13 @@ import "dotenv/config";
 export const config = {
   meili: {
     url: process.env.MEILI_URL || "http://localhost:7700",
-    masterKey: process.env.MEILI_MASTER_KEY || "adrex-dev-master-key",
+    masterKey: process.env.MEILI_MASTER_KEY || "",
     indexName: "addresses",
   },
   api: {
     port: parseInt(process.env.API_PORT || "3100", 10),
     host: process.env.API_HOST || "0.0.0.0",
-    keys: (process.env.API_KEYS || "dev-test-key-1")
+    keys: (process.env.API_KEYS || "")
       .split(",")
       .map((k) => k.trim())
       .filter(Boolean),

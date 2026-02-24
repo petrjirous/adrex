@@ -4,7 +4,7 @@ services:
     ports:
       - "7700:7700"
     environment:
-      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-adrex-dev-master-key}
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:?Set MEILI_MASTER_KEY in .env}
       - MEILI_ENV=development
     volumes:
       - meili_data:/meili_data
@@ -22,10 +22,10 @@ services:
       - "${API_PORT:-3100}:3100"
     environment:
       - MEILI_URL=http://meilisearch:7700
-      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-adrex-dev-master-key}
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:?Set MEILI_MASTER_KEY in .env}
       - API_PORT=3100
       - API_HOST=0.0.0.0
-      - API_KEYS=${API_KEYS:-dev-test-key-1}
+      - API_KEYS=${API_KEYS:?Set API_KEYS in .env}
       - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-100}
       - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
     depends_on:

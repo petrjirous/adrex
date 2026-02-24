@@ -311,10 +311,10 @@ Copy `.env.example` to `.env` and adjust as needed:
 | Variable | Default | Description |
 |---|---|---|
 | `MEILI_URL` | `http://localhost:7700` | Meilisearch connection URL |
-| `MEILI_MASTER_KEY` | `adrex-dev-master-key` | Meilisearch master key |
+| `MEILI_MASTER_KEY` | *(required)* | Meilisearch master key |
 | `API_PORT` | `3100` | API server port |
 | `API_HOST` | `0.0.0.0` | API server bind address |
-| `API_KEYS` | `dev-test-key-1` | Comma-separated valid API keys |
+| `API_KEYS` | *(required)* | Comma-separated valid API keys |
 | `RUIAN_DATA_DIR` | `./data` | Directory for RÚIAN downloads |
 | `RUIAN_CSV_URL` | `auto` | RÚIAN CSV URL (`auto` resolves latest from ČÚZK) |
 | `RATE_LIMIT_MAX` | `100` | Max requests per window |
@@ -355,9 +355,15 @@ RÚIAN CSV (3M rows) --> pipeline --> Meilisearch
 
 - **API**: TypeScript + Hono framework
 - **Search**: Meilisearch with typo tolerance and custom ranking
- **Widget**: Vanilla TypeScript, Vite IIFE bundle (~3.3KB gzipped)
+- **Widget**: Vanilla TypeScript, Vite IIFE bundle (~3.3KB gzipped)
 - **Data pipeline**: Download ZIP, extract 6,258 CSVs, parse Windows-1250, transform, batch-index
 - **Coordinates**: JTSK (Czech national grid) to WGS84 conversion via proj4
+
+## Documentation
+
+- **[Tutorial](TUTORIAL.md)** -- Step-by-step guide from zero to production
+- **[Kubernetes Deployment](k8s/README.md)** -- Production K8s manifests and instructions
+- **[Contributing](CONTRIBUTING.md)** -- Development setup and PR process
 
 ## License
 

@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: adrex-ingress
+  namespace: adrex
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # For other controllers, use their specific annotations.
+spec:
+  rules:
+    - host: adrex.your-domain.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: adrex-api
+                port:
+                  number: 80
+  # TLS example (uncomment after creating a certificate secret)
+  # tls:
+  #   - hosts:
+  #       - adrex.your-domain.example.com
+  #     secretName: adrex-tls

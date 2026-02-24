@@ -5,6 +5,15 @@
   "license": "MIT",
   "keywords": ["address", "autocomplete", "czech", "ruian", "meilisearch", "widget"],
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR-USERNAME/adrex.git"
+  },
+  "homepage": "https://github.com/YOUR-USERNAME/adrex#readme",
+  "bugs": {
+    "url": "https://github.com/YOUR-USERNAME/adrex/issues"
+  },
+  "author": "",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
