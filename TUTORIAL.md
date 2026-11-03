@@ -38,9 +38,20 @@ The first step is setting up the backend infrastructure and indexing the address
 Start by cloning the adrex repository to your local machine:
 
 ```bash
-git clone https://github.com/your-repo/adrex.git
+git clone https://github.com/petrjirous/adrex.git
 cd adrex
 ```
+
+### Configure and install
+
+Copy the example environment file and install the dependencies. Do this first: Docker Compose reads `MEILI_MASTER_KEY` and `API_KEYS` from `.env`, and the pipeline needs the Node.js dependencies.
+
+```bash
+cp .env.example .env
+npm install
+```
+
+Open `.env` and set `API_KEYS` to a secret value (e.g., `my-secret-token`).
 
 ### Start Meilisearch with docker compose
 
@@ -76,7 +87,7 @@ The data pipeline is a crucial part of adrex. It performs several heavy lifting 
 Run the pipeline using the following command:
 
 ```bash
-npm run pipeline:run
+npm run pipeline
 ```
 
 During execution, you'll see progress logs. The process usually takes 2 to 5 minutes depending on your internet speed and CPU. Once finished, Meilisearch will contain a fully searchable index of all Czech addresses.
@@ -85,16 +96,9 @@ During execution, you'll see progress logs. The process usually takes 2 to 5 min
 
 The API server acts as a secure proxy between your frontend and Meilisearch. It handles authentication, rate limiting, and request validation.
 
-Copy the example environment file and configure your keys:
+Start the server:
 
 ```bash
-cp .env.example .env
-```
-
-Open `.env` and set `API_KEYS` to a secret value (e.g., `my-secret-token`). Then start the server:
-
-```bash
-npm install
 npm run dev
 ```
 
@@ -121,7 +125,7 @@ curl -X POST http://localhost:3100/api/v1/address/validate \
   -H "Authorization: Bearer my-secret-token" \
   -d '{
     "street": "Václavské náměstí",
-    "number": "1",
+    "houseNumber": "1",
     "city": "Praha",
     "zip": "11000"
   }'
@@ -129,29 +133,41 @@ curl -X POST http://localhost:3100/api/v1/address/validate \
 
 ### Explain the response structure
 
-The API returns a standardized JSON structure for address suggestions:
+Autocomplete returns suggestions in this shape (the sample is illustrative, and `addressDetail` is shortened here):
 
 ```json
 {
   "suggestions": [
     {
-      "id": "21707936",
-      "street": "Václavské náměstí",
-      "houseNumber": "1",
-      "orientationNumber": null,
-      "city": "Praha",
-      "cityDistrict": "Nové Město",
-      "zip": "11000",
-      "formatted": "Václavské náměstí 1, 11000 Praha-Nové Město"
+      "isWholeAddress": true,
+      "values": {
+        "adrex-street": "Vodičkova",
+        "adrex-number": "2141/30",
+        "adrex-street-and-number": "Vodičkova 2141/30",
+        "adrex-city": "Praha",
+        "adrex-city-extended": "Praha - Nové Město",
+        "adrex-zip": "11000",
+        "adrex-whole-address": "Vodičkova 2141/30, Nové Město, 11000 Praha"
+      },
+      "addressDetail": {
+        "street": "Vodičkova",
+        "wholeNumber": "2141/30",
+        "city": "Praha",
+        "zip": "11000"
+      }
     }
-  ]
+  ],
+  "query": "Vodičkova 30 Praha",
+  "totalHits": 1000,
+  "processingTimeMs": 5
 }
 ```
 
-- `id`: The official RÚIAN code for the address.
-- `houseNumber`: The primary building number (číslo popisné).
-- `orientationNumber`: The secondary street number (číslo orientační), if applicable.
-- `formatted`: A pre-built string suitable for display in search results.
+- `isWholeAddress`: Whether the suggestion is a complete address.
+- `values`: Display values, keyed by the widget's input classes.
+- `addressDetail`: The full address record. See [`AddressDetail` fields](docs/usage.md#addressdetail-fields).
+
+Validation returns `{ result: { type, addresses }, processingTimeMs }`, where `type` is one of `HIT`, `MANY`, `TOOMANY`, `NOTHING` or `INSUFFICIENT_DATA`. See [Call validate](docs/usage.md#call-validate).
 
 ## Part 2: Adding the widget to your website
 
@@ -197,27 +213,27 @@ When a user selects a suggestion, the input's value will be updated to the full 
 In most e-commerce checkouts, you need the address split into separate fields for the database. adrex handles this automatically by looking for specific classes.
 
 ```html
-<form class="adrex-instance-checkout">
+<form>
   <div class="row">
     <div class="col">
-      <input type="text" class="adrex-street" placeholder="Street">
+      <input type="text" class="adrex-street adrex-instance-checkout" placeholder="Street">
     </div>
     <div class="col">
-      <input type="text" class="adrex-number" placeholder="Number">
+      <input type="text" class="adrex-number adrex-instance-checkout" placeholder="Number">
     </div>
   </div>
   <div class="row">
     <div class="col">
-      <input type="text" class="adrex-city" placeholder="City">
+      <input type="text" class="adrex-city adrex-instance-checkout" placeholder="City">
     </div>
     <div class="col">
-      <input type="text" class="adrex-zip" placeholder="ZIP">
+      <input type="text" class="adrex-zip adrex-instance-checkout" placeholder="ZIP">
     </div>
   </div>
 </form>
 ```
 
-By wrapping the fields in a container with the `adrex-instance-{name}` class, you tell the widget that these inputs belong together. The search logic will be attached to the street field by default, and selecting a result will auto-fill all other fields in that same container.
+By putting the `adrex-instance-{name}` class on each input, you tell the widget that these inputs belong together. The class must be on the `<input>` itself: on a wrapping `<form>` or `<div>` it's ignored, and the inputs join the `default` instance. The widget listens on every one of these inputs, and selecting a result auto-fills all the fields in the instance.
 
 ### Example 3: Two separate forms on one page
 
@@ -225,15 +241,15 @@ If you have a shipping address and a billing address on the same page, use diffe
 
 ```html
 <h3>Shipping Address</h3>
-<div class="adrex-instance-shipping">
-  <input type="text" class="adrex-street" placeholder="Street">
-  <input type="text" class="adrex-city" placeholder="City">
+<div>
+  <input type="text" class="adrex-street adrex-instance-shipping" placeholder="Street">
+  <input type="text" class="adrex-city adrex-instance-shipping" placeholder="City">
 </div>
 
 <h3>Billing Address</h3>
-<div class="adrex-instance-billing">
-  <input type="text" class="adrex-street" placeholder="Street">
-  <input type="text" class="adrex-city" placeholder="City">
+<div>
+  <input type="text" class="adrex-street adrex-instance-billing" placeholder="Street">
+  <input type="text" class="adrex-city adrex-instance-billing" placeholder="City">
 </div>
 ```
 
@@ -243,8 +259,9 @@ The widget uses the following class mappings to fill fields:
 
 - `adrex-street`: Fills the street name.
 - `adrex-number`: Fills the combined house and orientation number (e.g., "123/10").
+- `adrex-street-and-number`: Fills the street and number together.
 - `adrex-city`: Fills the city name.
-- `adrex-city-extended`: Fills the city name including the district (e.g., "Praha-Nové Město").
+- `adrex-city-extended`: Fills the city name including the city part (e.g., "Praha - Nové Město").
 - `adrex-zip`: Fills the 5-digit postal code.
 - `adrex-whole-address`: Fills the full formatted address.
 
@@ -261,7 +278,7 @@ adrex.configure({
   debounce: 250,           // Debounce time in milliseconds (default: 250)
   minChars: 2,             // Min characters before searching (default: 2)
   maxSuggestions: 5,       // Maximum items to show in dropdown (default: 8)
-  theme: 'light',          // 'light', 'dark', or 'none'
+  theme: 'light',          // 'light' or 'dark'
   noResultsText: 'No addresses found'
 });
 ```
@@ -286,7 +303,7 @@ Callbacks allow you to react to user actions or handle errors gracefully.
 ```javascript
 adrex.configure({
   onSelect: (suggestion, instance) => {
-    console.log('User selected:', suggestion.formatted);
+    console.log('User selected:', suggestion.values['adrex-whole-address']);
     // You could trigger a shipping cost recalculation here
   },
   onSuggest: (suggestions) => {
@@ -305,11 +322,12 @@ If the default dropdown layout doesn't fit your design, you can provide a custom
 ```javascript
 adrex.configure({
   renderSuggestion: (suggestion) => {
+    const values = suggestion.values;
     return `
       <div class="my-custom-item">
-        <span class="street">${suggestion.street} ${suggestion.houseNumber}</span>
-        <span class="zip-badge">${suggestion.zip}</span>
-        <div class="city">${suggestion.city}</div>
+        <span class="street">${values['adrex-street']} ${values['adrex-number']}</span>
+        <span class="zip-badge">${values['adrex-zip']}</span>
+        <div class="city">${values['adrex-city']}</div>
       </div>
     `;
   }
@@ -318,12 +336,12 @@ adrex.configure({
 
 ### Custom empty state
 
-Show a helpful message when no addresses are found.
+Show a helpful message when no addresses are found. `renderEmpty()` receives no arguments, and its HTML goes inside the `.adrex-dropdown-empty` element.
 
 ```javascript
 adrex.configure({
-  renderEmpty: (query) => {
-    return `<div class="adrex-empty">No addresses found for "${query}". Please check your spelling.</div>`;
+  renderEmpty: () => {
+    return '<div>No addresses found. Please check your spelling.</div>';
   }
 });
 ```
@@ -342,7 +360,8 @@ adrex.configure({ theme: 'dark' });
 
 ### CSS Custom Properties
 
-The widget uses 13 CSS variables to control the appearance of the dropdown. You can override these in your global CSS file.
+The widget uses 14 CSS variables to control the appearance of the dropdown. You can override these in your global CSS file. The widget adds its stylesheet after yours, so use a selector more specific than `.adrex-dropdown`, such as `body .adrex-dropdown`.
+
 | Property | Description | Default (Light) |
 | :--- | :--- | :--- |
 | `--adrex-dropdown-bg` | Background color of the dropdown | #ffffff |
@@ -366,7 +385,7 @@ To create a completely unique look, define your own styles.
 
 ```css
 /* Custom "Corporate Blue" Theme */
-.adrex-dropdown {
+body .adrex-dropdown {
   --adrex-dropdown-bg: #f0f4f8;
   --adrex-dropdown-text-color: #1a365d;
   --adrex-dropdown-border: 1px solid #2b6cb0;
@@ -388,69 +407,15 @@ function toggleDarkMode(isDark) {
 }
 ```
 
-Alternatively, if you use a fully custom CSS approach, set `theme: 'none'` in the configuration. This removes all default colors and borders, letting you style the `.adrex-dropdown` and `.adrex-item` classes from scratch.
+For a fully custom look, override the built-in rules with more specific selectors. The elements to target are `.adrex-dropdown`, `.adrex-dropdown-item`, `.adrex-dropdown-empty` and `.highlight`. `theme: 'none'` doesn't remove the built-in styles, because they're injected at script load, before your code can call `configure()`. See [Themes](docs/configuration.md#themes).
 
 ## Part 5: Deploying to production
 
-When moving to production, you should use Docker to ensure a consistent environment.
+The repository already includes `docker-compose.prod.yml`, which runs Caddy, the API and Meilisearch. Copy `.env.prod.example` to `.env.prod`, set `DOMAIN`, a strong `MEILI_MASTER_KEY` and your `API_KEYS`, then start the stack. Caddy gets a TLS certificate automatically and serves the widget at `/widget/dist/adrex.js`.
 
-### Docker Compose deployment
+The API already sends `Access-Control-Allow-Origin: *`, so a proxy in front of it shouldn't add its own CORS headers.
 
-Create a `docker-compose.prod.yml` file. It's vital to set a strong `MEILI_MASTER_KEY` and restrict `API_KEYS`.
-
-```yaml
-version: '3.8'
-
-services:
-  meilisearch:
-    image: getmeili/meilisearch:v1.12
-    environment:
-      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
-      - MEILI_ENV=production
-    volumes:
-      - ./data/meili:/meili_data
-    restart: always
-
-  api:
-    build: .
-    ports:
-      - "3100:3100"
-    environment:
-      - MEILI_URL=http://meilisearch:7700
-      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
-      - API_KEYS=${PROD_API_KEYS}
-      - RATE_LIMIT_MAX=100
-      - RATE_LIMIT_WINDOW_MS=60000
-    depends_on:
-      - meilisearch
-    restart: always
-```
-
-### Nginx reverse proxy
-
-You should never expose the API port directly to the internet. Use Nginx to handle SSL and CORS headers.
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name adrex-api.your-domain.example.com;
-
-    location / {
-        proxy_pass http://localhost:3100;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-
-        # Basic CORS setup
-        add_header 'Access-Control-Allow-Origin' 'https://your-website.example.com' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type' always;
-
-        if ($request_method = 'OPTIONS') {
-            return 204;
-        }
-    }
-}
-```
+For the full steps, see [Production with Docker Compose and Caddy](docs/installation.md#production-with-docker-compose-and-caddy).
 
 ### Kubernetes deployment
 
@@ -461,6 +426,8 @@ For larger installations, use the manifests provided in the `k8s/` directory. Th
 - **Secrets**: Store your API keys and Meilisearch master key.
 - **Pipeline Job**: A Kubernetes Job that can be triggered to refresh the address data.
 
+See [`k8s/README.md`](k8s/README.md) for the deployment steps.
+
 ## Part 6: Updating address data
 
 The RÚIAN dataset is updated by the Czech government every month. To keep your deployment current, you need to re-run the data pipeline.
@@ -470,97 +437,34 @@ The RÚIAN dataset is updated by the Czech government every month. To keep your 
 In a Docker environment, you can run the pipeline inside the API container:
 
 ```bash
-docker compose exec api npm run pipeline:run
+docker compose exec api node dist/pipeline.js
 ```
 
 The pipeline is designed to be safe to run on a live system. It downloads the new data, processes it, and updates the existing Meilisearch index in-place. Because search queries remain functional during the indexing process, there is no downtime for your users.
 
+The pipeline adds or updates addresses by `id` and doesn't delete anything, so addresses removed from RÚIAN stay in the index.
+
 ## Part 7: API reference quick guide
 
-### POST /api/v1/address/autocomplete
+The API has three routes:
 
-Finds address suggestions based on a partial query string.
+- `POST /api/v1/address/autocomplete` returns suggestions for a partial address.
+- `POST /api/v1/address/validate` checks an address against the RÚIAN data.
+- `GET /health` reports the API's status and needs no API key.
 
-**Request Body:**
+The POST routes need an API key, sent as `Authorization: Bearer <your-api-key>` or as `?apiKey=<your-api-key>`. Requests are rate limited per API key.
 
-```json
-{
-  "query": "string",
-  "limit": 5
-}
-```
-
-**Successful Response (200 OK):**
-
-```json
-{
-  "suggestions": [
-    {
-      "id": "21707936",
-      "street": "Václavské náměstí",
-      "houseNumber": "1",
-      "orientationNumber": null,
-      "city": "Praha",
-      "zip": "11000",
-      "formatted": "Václavské náměstí 1, 11000 Praha"
-    }
-  ]
-}
-```
-
-### POST /api/v1/address/validate
-
-Checks if a specific address exists in the RÚIAN database.
-
-**Request Body:**
-
-```json
-{
-  "street": "Václavské náměstí",
-  "number": "1",
-  "city": "Praha",
-  "zip": "11000"
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "valid": true,
-  "match": {
-    "id": "21707936",
-    "score": 1.0
-  }
-}
-```
-
-### Authentication
-
-The API requires a Bearer token in the `Authorization` header.
-
-```http
-Authorization: Bearer <your-api-key>
-```
-
-Alternatively, for simple widget integrations, you can pass the key as a query parameter (though this is less secure): `?apiKey=<your-api-key>`.
-
-### Rate Limiting
-
-By default, the API limits requests to prevent abuse. You can tune this in your `.env` file:
-
-- `RATE_LIMIT_MAX`: Max number of requests per window.
-- `RATE_LIMIT_WINDOW_MS`: The window size in milliseconds.
+For requests, responses and error codes, see [Using adrex](docs/usage.md).
 
 ## Troubleshooting
 
 ### "apiKey not set" error
 
-The widget will display an error in the console if you haven't called `adrex.setClientId()`. Ensure this is called before the user interacts with any search fields.
+The widget will log a warning in the console if you haven't called `adrex.setClientId()`. Ensure this is called before the user interacts with any search fields.
 
 ### CORS errors
 
-If the widget fails to fetch suggestions, check your browser's network tab. If you see a CORS error, verify that your API server is sending the correct `Access-Control-Allow-Origin` headers. In production, this is typically handled by Nginx or your load balancer.
+If the widget fails to fetch suggestions, check your browser's network tab. The API already sends `Access-Control-Allow-Origin: *`, so if you see a CORS error, check that a proxy or load balancer isn't adding a second copy of that header.
 
 ### Pipeline fails to download data
 
@@ -568,7 +472,7 @@ The RÚIAN CSV server can sometimes be slow or temporarily unavailable. If the p
 
 ### Meilisearch not healthy
 
-If the API logs show "Meilisearch connection failed", check the status of your Docker containers.
+If `/health` shows `"meili": "error"`, or searches return a 503 error, check the status of your Docker containers.
 
 ```bash
 docker compose ps
@@ -576,12 +480,4 @@ docker compose ps
 
 If Meilisearch is running but unreachable, check the `MEILI_URL` and `MEILI_MASTER_KEY` in your `.env` file. They must match the values used when starting the Meilisearch container.
 
-### Debug logging
-
-To see more detailed logs from the API server, set the `LOG_LEVEL` environment variable to `debug`:
-
-```bash
-LOG_LEVEL=debug npm run dev
-```
-
-This will output every incoming request and the raw queries sent to Meilisearch, which is helpful for diagnosing search quality issues.
+For more errors and their fixes, see [Troubleshooting](docs/troubleshooting.md).
