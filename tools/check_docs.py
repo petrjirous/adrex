@@ -14,6 +14,10 @@ Checks:
     URL schemes are skipped);
   - every fenced code block declares a language;
   - the bare word TODO appears nowhere, code blocks included.
+
+Headings and links are ignored inside fenced code blocks, inline code spans and
+HTML comments. This isn't a full CommonMark parser: other raw HTML blocks, such
+as <pre>, are read as Markdown.
 """
 
 import re
@@ -30,13 +34,18 @@ REQUIRED_FILES = (
     "docs/troubleshooting.md",
 )
 
-QUOTE_PREFIX = re.compile(r"^(?: {0,3}> ?)+")
-LIST_ITEM = re.compile(r"^\s*(?:[-+*]|\d{1,9}[.)])\s")
+QUOTE_MARKER = re.compile(r" {0,3}> ?")
+LIST_MARKERS = re.compile(r"^(?:[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]+)+")
 FENCE = re.compile(r"^(\s*)(`{3,}|~{3,})(.*)$")
+COMMENT_START = re.compile(r"^(\s*)<!--")
 ATX_HEADING = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+(.*))?$")
 SETEXT_UNDERLINE = re.compile(r"^ {0,3}(=+|-+)[ \t]*$")
 NOT_SETEXT_TEXT = re.compile(r"^\s*(?:\||>|#{1,6}(?:\s|$)|[-+*]\s|\d{1,9}[.)]\s)")
-REFERENCE_DEFINITION = re.compile(r"^ {0,3}\[(?!\^)[^\]]+\]:\s*(<[^>]*>|\S+)")
+TABLE_ROW = re.compile(r"^\s*\|")
+REFERENCE_DEFINITION = re.compile(
+    r"^ {0,3}\[(?!\^)[^\]]+\]:[ \t]*(<[^>]*>|\S+)"
+    r"(?:[ \t]+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?[ \t]*$"
+)
 HTML_LINK = re.compile(r"<(?:a|img)\b[^>]*?\b(?:href|src)\s*=\s*[\"']([^\"']+)[\"']", re.I)
 URL_SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
 TODO_WORD = re.compile(r"\bTODO\b")
@@ -46,15 +55,31 @@ ASCII_PUNCTUATION = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
 class Line:
     """One source line, classified by the block scanner."""
 
-    def __init__(self, number, text, in_code):
+    def __init__(self, number, text, is_text):
         self.number = number
         self.text = text
-        self.in_code = in_code  # True for fence lines and everything between them
+        self.is_text = is_text  # False for fenced code and HTML comment lines
 
 
 def read_lines(path):
     text = path.read_text(encoding="utf-8-sig", errors="replace")
     return text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+
+
+def strip_quotes(text, limit=None):
+    """Remove up to `limit` blockquote markers. Returns (rest, markers_removed)."""
+    depth = 0
+    while limit is None or depth < limit:
+        marker = QUOTE_MARKER.match(text)
+        if not marker:
+            break
+        text = text[marker.end():]
+        depth += 1
+    return text, depth
+
+
+def indent_width(text):
+    return len(text.expandtabs(4)) - len(text.expandtabs(4).lstrip())
 
 
 def is_closing_fence(body, fence):
@@ -64,6 +89,7 @@ def is_closing_fence(body, fence):
         and match.group(2)[0] == fence["char"]
         and len(match.group(2)) >= fence["length"]
         and not match.group(3).strip()
+        and indent_width(body) - fence["content_indent"] <= 3
     )
 
 
@@ -76,66 +102,67 @@ def scan_blocks(lines):
     classified = []
     fences = []
     fence = None
+    in_comment = False
     in_list = False
+    item_indent = 0
 
     for number, raw in enumerate(lines, start=1):
-        quote = QUOTE_PREFIX.match(raw)
-        body = raw[quote.end():] if quote else raw
-
-        # A fence inside a blockquote ends together with the blockquote.
-        if fence and fence["quoted"] and not quote:
-            fence = None
-
         if fence:
-            classified.append(Line(number, raw, True))
-            if is_closing_fence(body, fence):
-                fence = None
+            # Quote markers only count if the fence itself was opened inside
+            # that many blockquotes. In a plain fence, `> ` is just code.
+            body, depth = strip_quotes(raw, fence["quote_depth"])
+            left_container = depth < fence["quote_depth"] or (
+                body.strip() and indent_width(body) < fence["content_indent"]
+            )
+            if not left_container:
+                classified.append(Line(number, raw, False))
+                if is_closing_fence(body, fence):
+                    fence = None
+                continue
+            fence = None  # The blockquote or list item ended, and the fence with it.
+
+        if in_comment:
+            classified.append(Line(number, raw, False))
+            in_comment = "-->" not in raw
             continue
 
-        in_list = bool(LIST_ITEM.match(body)) or (
-            in_list and (not body.strip() or body[0] in " \t")
-        )
+        body, quote_depth = strip_quotes(raw)
+        markers = LIST_MARKERS.match(body)
+        if markers:
+            in_list = True
+            item_indent = len(markers.group().expandtabs(4))
+        else:
+            in_list = in_list and (not body.strip() or body[0] in " \t")
+        content = body[markers.end():] if markers else body
 
-        match = FENCE.match(body)
+        comment = COMMENT_START.match(content)
+        if comment and (len(comment.group(1)) <= 3 or in_list):
+            classified.append(Line(number, raw, False))
+            in_comment = "-->" not in content[comment.end():]
+            continue
+
+        match = FENCE.match(content)
         if match:
-            indent = len(match.group(1).expandtabs(4))
+            indent = indent_width(content)
             marker, info = match.group(2), match.group(3).strip()
             # An opener indented 4+ outside a list is an indented code block,
             # and backticks in the info string make it an inline code span.
             is_opener = (indent <= 3 or in_list) and not (marker[0] == "`" and "`" in info)
             if is_opener:
-                fence = {"char": marker[0], "length": len(marker), "quoted": bool(quote)}
+                column = indent + (item_indent if markers else 0)
+                fence = {
+                    "char": marker[0],
+                    "length": len(marker),
+                    "quote_depth": quote_depth,
+                    "content_indent": item_indent if in_list and column >= item_indent else 0,
+                }
                 fences.append((number, info))
-                classified.append(Line(number, raw, True))
+                classified.append(Line(number, raw, False))
                 continue
 
-        classified.append(Line(number, raw, False))
+        classified.append(Line(number, raw, True))
 
     return classified, fences
-
-
-def mask_inline_code(text):
-    """Blank out code spans and backslash escapes, keeping the text length."""
-    chars = list(text)
-    i = 0
-    while i < len(text):
-        if text[i] == "\\" and i + 1 < len(text) and text[i + 1] in ASCII_PUNCTUATION:
-            chars[i] = chars[i + 1] = " "
-            i += 2
-        elif text[i] == "`":
-            run_end = i
-            while run_end < len(text) and text[run_end] == "`":
-                run_end += 1
-            closing = find_backtick_run(text, run_end, run_end - i)
-            if closing == -1:
-                i = run_end  # No closing run: the backticks are literal.
-            else:
-                span_end = closing + (run_end - i)
-                chars[i:span_end] = " " * (span_end - i)
-                i = span_end
-        else:
-            i += 1
-    return "".join(chars)
 
 
 def find_backtick_run(text, start, length):
@@ -154,13 +181,62 @@ def find_backtick_run(text, start, length):
     return -1
 
 
+def code_span_text(content):
+    content = content.replace("\n", " ")
+    if len(content) > 1 and content[0] == content[-1] == " " and content.strip():
+        return content[1:-1]
+    return content
+
+
+def literal_spans(text):
+    """Yield (start, end, rendered_text) for text that isn't inline Markdown.
+
+    Covers backslash escapes, code spans and HTML comments.
+    """
+    i = 0
+    while i < len(text):
+        if text[i] == "\\" and i + 1 < len(text) and text[i + 1] in ASCII_PUNCTUATION:
+            yield i, i + 2, text[i + 1]
+            i += 2
+        elif text.startswith("<!--", i):
+            end = text.find("-->", i + 4)
+            if end == -1:
+                i += 4
+            else:
+                yield i, end + 3, ""
+                i = end + 3
+        elif text[i] == "`":
+            run_end = i
+            while run_end < len(text) and text[run_end] == "`":
+                run_end += 1
+            length = run_end - i
+            closing = find_backtick_run(text, run_end, length)
+            if closing == -1:
+                i = run_end  # No closing run: the backticks are literal.
+            else:
+                yield i, closing + length, code_span_text(text[run_end:closing])
+                i = closing + length
+        else:
+            i += 1
+
+
+def mask_literals(text):
+    """Blank out literal spans, keeping the text's length and line breaks."""
+    chars = list(text)
+    for start, end, _ in literal_spans(text):
+        for index in range(start, end):
+            if chars[index] != "\n":
+                chars[index] = " "
+    return "".join(chars)
+
+
 def parse_destination(text, start):
     """Parse an inline link destination that starts right after `](`.
 
     Returns the destination, or None if the text isn't a valid inline link.
     """
     i = start
-    while i < len(text) and text[i] in " \t":
+    while i < len(text) and text[i] in " \t\n":
         i += 1
 
     if i < len(text) and text[i] == "<":
@@ -172,7 +248,7 @@ def parse_destination(text, start):
     else:
         begin = i
         depth = 0
-        while i < len(text) and text[i] not in " \t":
+        while i < len(text) and text[i] not in " \t\n":
             if text[i] == "(":
                 depth += 1
             elif text[i] == ")":
@@ -182,7 +258,7 @@ def parse_destination(text, start):
             i += 1
         destination = text[begin:i]
 
-    rest = text[i:].lstrip(" \t")
+    rest = text[i:].lstrip(" \t\n")
     if rest.startswith(")"):
         return destination
     # An optional title may follow the destination.
@@ -191,49 +267,96 @@ def parse_destination(text, start):
     return None
 
 
-def extract_links(text):
-    """Return every link destination on one line of Markdown outside code."""
-    masked = mask_inline_code(text)
+def atx_heading(body):
+    """Match an ATX heading, which may also start a list item."""
+    markers = LIST_MARKERS.match(body)
+    return ATX_HEADING.match(body[markers.end():] if markers else body)
+
+
+def inline_blocks(classified):
+    """Group text lines into blocks that Markdown parses inline as one unit.
+
+    Yields lists of (line_number, text). A code span can wrap across the lines
+    of a paragraph, but it can't leave the paragraph.
+    """
+    block = []
+    for line in classified:
+        body = strip_quotes(line.text)[0] if line.is_text else ""
+        stands_alone = atx_heading(body) or SETEXT_UNDERLINE.match(body) or TABLE_ROW.match(body)
+
+        if not body.strip() or stands_alone or LIST_MARKERS.match(body):
+            if block:
+                yield block
+            block = []
+        if stands_alone and body.strip():
+            yield [(line.number, body)]
+        elif body.strip():
+            block.append((line.number, body))
+    if block:
+        yield block
+
+
+def extract_links(block):
+    """Return (line_number, destination) for every link in an inline block."""
+    numbers = [number for number, _ in block]
+    masked = mask_literals("\n".join(text for _, text in block))
     links = []
 
-    definition = REFERENCE_DEFINITION.match(masked)
-    if definition:
-        links.append(definition.group(1).strip("<>"))
+    # Reference definitions can't interrupt a paragraph, so they only count at
+    # the start of a block.
+    for number, text in zip(numbers, masked.split("\n")):
+        definition = REFERENCE_DEFINITION.match(text)
+        if not definition:
+            break
+        links.append((number, definition.group(1).strip("<>")))
 
-    # Searching for `](` also finds nested links and links whose text was
-    # hard-wrapped onto the previous line.
+    def line_of(position):
+        return numbers[masked.count("\n", 0, position)]
+
+    # Searching for `](` also finds nested links and hard-wrapped link text.
     position = masked.find("](")
     while position != -1:
         destination = parse_destination(masked, position + 2)
         if destination is not None:
-            links.append(destination)
+            links.append((line_of(position), destination))
         position = masked.find("](", position + 2)
 
-    links.extend(HTML_LINK.findall(masked))
+    for match in HTML_LINK.finditer(masked):
+        links.append((line_of(match.start()), match.group(1)))
     return links
 
 
 def heading_plain_text(text):
-    """Reduce heading Markdown to the text GitHub builds the anchor from."""
-    text = text.strip()
-    text = re.sub(r"[ \t]+#+$", "", text)
+    """Reduce heading Markdown to the text GitHub builds the anchor from.
+
+    Code spans and escapes are swapped for placeholders first, so that markup
+    stripping can't touch them: `<input>` in backticks is text, not a tag.
+    """
+    text = re.sub(r"[ \t]+#+$", "", text.strip())
     if re.fullmatch(r"#+", text):
         return ""
+
+    literals = []
+    pieces = []
+    position = 0
+    for start, end, rendered in literal_spans(text):
+        pieces.append(text[position:start])
+        pieces.append(f"{len(literals)}")
+        literals.append(rendered)
+        position = end
+    pieces.append(text[position:])
+    text = "".join(pieces)
+
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
     text = re.sub(r"\[([^\]]*)\]\[[^\]]*\]", r"\1", text)
     text = re.sub(r"<[^>]+>", "", text)
+    # Emphasis markers disappear, but snake_case stays.
+    text = re.sub(r"\*+", "", text)
+    text = re.sub(r"(?<![^\s(])_+|_+(?![^\s).,:;!?])", "", text)
 
-    # Emphasis markers disappear, but code spans and snake_case stay literal.
-    parts = re.split(r"(`+[^`]*`+)", text)
-    for index, part in enumerate(parts):
-        if part.startswith("`"):
-            parts[index] = part.strip("`").strip()
-        else:
-            part = re.sub(r"\*+", "", part)
-            part = re.sub(r"(?<![^\s(])_+|_+(?![^\s).,:;!?])", "", part)
-            parts[index] = re.sub(r"\\(.)", r"\1", part)
-    return "".join(parts).strip()
+    text = re.sub("(\\d+)", lambda match: literals[int(match.group(1))], text)
+    return text.strip()
 
 
 def slugify(text):
@@ -252,19 +375,18 @@ def slugify(text):
 
 
 def find_headings(classified):
-    """Return (line_number, level, plain_text) for each heading outside code."""
+    """Return (line_number, level, plain_text) for each heading in the text."""
     headings = []
     previous = None
 
     for line in classified:
-        if line.in_code:
+        if not line.is_text:
             previous = None
             continue
 
-        quote = QUOTE_PREFIX.match(line.text)
-        body = line.text[quote.end():] if quote else line.text
+        body = strip_quotes(line.text)[0]
 
-        atx = ATX_HEADING.match(body)
+        atx = atx_heading(body)
         if atx:
             headings.append((line.number, len(atx.group(1)), heading_plain_text(atx.group(2) or "")))
             previous = None
@@ -358,7 +480,12 @@ class Checker:
         lines = read_lines(path)
         classified, fences = scan_blocks(lines)
 
-        h1_lines = [number for number, level, _ in find_headings(classified) if level == 1]
+        h1s = [(number, text) for number, level, text in find_headings(classified) if level == 1]
+        h1_lines = [number for number, _ in h1s]
+        for number, text in h1s:
+            if not text:
+                self.report(relative_path, number, "H1 title is empty")
+
         if not h1_lines:
             self.report(relative_path, 1, "missing H1 title")
         else:
@@ -374,9 +501,10 @@ class Checker:
         for line in classified:
             if TODO_WORD.search(line.text):
                 self.report(relative_path, line.number, "bare TODO, use a '> **TBD:** ...' note")
-            if not line.in_code:
-                for link in extract_links(line.text):
-                    self.check_link(relative_path, path, line.number, link)
+
+        for block in inline_blocks(classified):
+            for number, link in extract_links(block):
+                self.check_link(relative_path, path, number, link)
 
     def run(self):
         for required in REQUIRED_FILES:

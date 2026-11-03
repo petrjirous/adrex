@@ -125,6 +125,16 @@ class HeadingTests(CheckDocsTestCase):
         self.write("docs/usage.md", "Some text.\n\n## Not an H1\n")
         self.assert_problem("docs/usage.md:1", "H1")
 
+    def test_h1_with_no_title(self):
+        for title in ("#", "# ", "# #"):
+            with self.subTest(title=title):
+                self.write("docs/usage.md", f"{title}\n\nText.\n")
+                self.assert_problem("docs/usage.md:1", "H1")
+
+    def test_h1_in_a_list_item_counts(self):
+        self.write("docs/usage.md", "# Usage\n\n- # Again\n")
+        self.assert_problem("docs/usage.md:3", "H1")
+
     def test_empty_file_has_no_h1(self):
         self.write("docs/usage.md", "")
         self.assert_problem("docs/usage.md:1", "H1")
@@ -233,6 +243,42 @@ class LinkTests(CheckDocsTestCase):
         self.write("docs/usage.md", "# Usage\n\n\\[x\\](nope.md)\n")
         self.assert_clean()
 
+    def test_label_followed_by_prose_is_not_a_definition(self):
+        self.write("docs/usage.md", "# Usage\n\n[Note]: this is not a definition\n")
+        self.assert_clean()
+
+    def test_definition_with_title_is_checked(self):
+        self.write("docs/usage.md", '# Usage\n\n[ref]: nope.md "A title"\n')
+        self.assert_problem("docs/usage.md:3", "nope.md")
+
+    def test_consecutive_definitions_are_checked(self):
+        self.write("docs/usage.md", "# Usage\n\n[a]: installation.md\n[b]: nope.md\n")
+        self.assert_problem("docs/usage.md:4", "nope.md")
+
+    def test_definition_cannot_interrupt_a_paragraph(self):
+        self.write("docs/usage.md", "# Usage\n\nSome text\n[a]: nope.md\n")
+        self.assert_clean()
+
+    def test_code_span_wrapped_across_lines_is_ignored(self):
+        self.write("docs/usage.md", "# Usage\n\nsplit `[x](nope.md)\nstill code` here\n")
+        self.assert_clean()
+
+    def test_link_after_wrapped_code_span_reports_its_own_line(self):
+        self.write("docs/usage.md", "# Usage\n\nsplit `code\nstill code` then [x](nope.md)\n")
+        self.assert_problem("docs/usage.md:4", "nope.md")
+
+    def test_code_span_cannot_cross_a_paragraph_break(self):
+        self.write("docs/usage.md", "# Usage\n\nstray ` tick\n\n[x](nope.md) ` tick\n")
+        self.assert_problem("docs/usage.md:5", "nope.md")
+
+    def test_code_span_cannot_cross_list_items(self):
+        self.write("docs/usage.md", "# Usage\n\n- stray ` tick\n- [x](nope.md) ` tick\n")
+        self.assert_problem("docs/usage.md:4", "nope.md")
+
+    def test_link_text_wrapped_across_lines_is_checked(self):
+        self.write("docs/usage.md", "# Usage\n\n[wrapped\ntext](nope.md)\n")
+        self.assert_problem("docs/usage.md:4", "nope.md")
+
     def test_link_with_title_is_checked(self):
         self.write("docs/usage.md", '# Usage\n\n[x](nope.md "A title")\n')
         self.assert_problem("docs/usage.md:3", "nope.md")
@@ -283,12 +329,24 @@ class AnchorTests(CheckDocsTestCase):
             ("## [Linked](installation.md) title", "linked-title"),
             ("## PIPELINE_BATCH_SIZE", "pipeline_batch_size"),
             ("## Closed heading ##", "closed-heading"),
+            ("### The `<input>` tag", "the-input-tag"),
+            ("### `<html data-adrex-theme>` is overwritten", "html-data-adrex-theme-is-overwritten"),
+            ("## Use `[a](b)` syntax", "use-ab-syntax"),
+            ("## Use ``a`b`` ticks", "use-ab-ticks"),
+            ("## [`code`](installation.md) link", "code-link"),
+            ("## Real <b>bold</b> tag", "real-bold-tag"),
+            ("## Escaped \\<b\\> tag", "escaped-b-tag"),
+            ("## `snake_case` and __bold__", "snake_case-and-bold"),
             ("Setext title\n---", "setext-title"),
         ]
         for heading, slug in cases:
             with self.subTest(heading=heading):
                 self.write("docs/usage.md", f"# Usage\n\n{heading}\n\n[x](#{slug})\n")
                 self.assert_clean()
+
+    def test_anchor_with_code_span_content_deleted_is_broken(self):
+        self.write("docs/usage.md", "# Usage\n\n## The `<input>` tag\n\n[x](#the--tag)\n")
+        self.assert_problem("docs/usage.md:5", "#the--tag")
 
     def test_percent_encoded_anchor(self):
         self.write(
@@ -364,6 +422,107 @@ class FenceTests(CheckDocsTestCase):
     def test_inline_triple_backticks_are_not_a_fence(self):
         self.write("docs/usage.md", f"# Usage\n\n{FENCE}inline{FENCE}\n\n# Second\n")
         self.assert_problem("docs/usage.md:5", "H1")
+
+
+class ContainerFenceTests(CheckDocsTestCase):
+    def test_fence_opened_on_a_list_marker_line(self):
+        for marker in ("- ", "* ", "1. ", "10) "):
+            with self.subTest(marker=marker):
+                pad = " " * len(marker)
+                self.write(
+                    "docs/usage.md",
+                    f"# Usage\n\n{marker}{FENCE}bash\n{pad}# comment\n{pad}{FENCE}\n",
+                )
+                self.assert_clean()
+
+    def test_fence_on_a_nested_list_marker_line(self):
+        self.write("docs/usage.md", f"# Usage\n\n- - {FENCE}bash\n    # comment\n    {FENCE}\n")
+        self.assert_clean()
+
+    def test_no_language_on_a_list_marker_line_is_reported_at_the_opener(self):
+        self.write("docs/usage.md", f"# Usage\n\n- {FENCE}\n  # comment\n  {FENCE}\n")
+        self.assert_problem("docs/usage.md:3", "language")
+
+    def test_fence_on_a_marker_line_in_a_blockquote(self):
+        self.write("docs/usage.md", f"# Usage\n\n> - {FENCE}bash\n>   # comment\n>   {FENCE}\n")
+        self.assert_clean()
+
+    def test_fence_ends_with_its_list_item(self):
+        self.write("docs/usage.md", f"# Usage\n\n- {FENCE}bash\n  code\n\n# Second\n")
+        self.assert_problem("docs/usage.md:6", "H1")
+
+    def test_blank_line_keeps_a_list_fence_open(self):
+        self.write("docs/usage.md", f"# Usage\n\n- {FENCE}bash\n  a\n\n  # comment\n  {FENCE}\n")
+        self.assert_clean()
+
+    def test_fence_continuing_a_list_item_ends_with_it(self):
+        self.write("docs/usage.md", f"# Usage\n\n- Item\n\n  {FENCE}bash\n  code\n\n# Second\n")
+        self.assert_problem("docs/usage.md:8", "H1")
+
+    def test_quoted_lines_do_not_close_a_plain_fence(self):
+        self.write(
+            "docs/usage.md",
+            f"# Usage\n\n{FENCE}markdown\n> {FENCE}\n> # quoted\n> {FENCE}\n{FENCE}\n",
+        )
+        self.assert_clean()
+
+    def test_deeper_quote_does_not_close_a_quoted_fence(self):
+        self.write(
+            "docs/usage.md",
+            f"# Usage\n\n> {FENCE}markdown\n> > {FENCE}\n> > # quoted\n> {FENCE}\n",
+        )
+        self.assert_clean()
+
+    def test_fence_ends_with_its_blockquote(self):
+        self.write("docs/usage.md", f"# Usage\n\n> {FENCE}bash\n> code\n\n# Second\n")
+        self.assert_problem("docs/usage.md:6", "H1")
+
+    def test_closing_fence_indented_four_spaces_is_code(self):
+        self.write(
+            "docs/usage.md",
+            f"# Usage\n\n{FENCE}bash\n    {FENCE}\n# comment\n{FENCE}\n",
+        )
+        self.assert_clean()
+
+
+class HtmlCommentTests(CheckDocsTestCase):
+    def test_headings_in_a_comment_are_ignored(self):
+        self.write("docs/usage.md", "# Usage\n\n<!--\n# not a heading\n-->\n")
+        self.assert_clean()
+
+    def test_heading_in_a_comment_is_not_an_anchor_target(self):
+        self.write("docs/usage.md", "# Usage\n\n<!--\n## Hidden\n-->\n\n[x](#hidden)\n")
+        self.assert_problem("docs/usage.md:7", "#hidden")
+
+    def test_links_in_a_comment_are_ignored(self):
+        self.write(
+            "docs/usage.md",
+            "# Usage\n\n<!-- [x](nope.md) -->\n\n<!--\n\n[y](nope.md)\n-->\n",
+        )
+        self.assert_clean()
+
+    def test_inline_comment_is_ignored_but_the_rest_of_the_line_is_not(self):
+        self.write("docs/usage.md", "# Usage\n\nText <!-- [x](gone.md) --> [y](nope.md)\n")
+        self.assert_problem("docs/usage.md:3", "nope.md")
+
+    def test_fence_in_a_comment_is_ignored(self):
+        self.write("docs/usage.md", f"# Usage\n\n<!--\n{FENCE}\nplain\n-->\n")
+        self.assert_clean()
+
+    def test_content_after_a_comment_is_checked(self):
+        self.write("docs/usage.md", "# Usage\n\n<!--\nhidden\n-->\n\n[x](nope.md)\n")
+        self.assert_problem("docs/usage.md:7", "nope.md")
+
+    def test_comment_in_a_fence_stays_code(self):
+        self.write(
+            "docs/usage.md",
+            f"# Usage\n\n{FENCE}html\n<!--\n{FENCE}\n\n[x](nope.md)\n",
+        )
+        self.assert_problem("docs/usage.md:7", "nope.md")
+
+    def test_todo_in_a_comment_is_still_reported(self):
+        self.write("docs/usage.md", "# Usage\n\n<!--\nTODO later\n-->\n")
+        self.assert_problem("docs/usage.md:4", "TODO")
 
 
 class TodoTests(CheckDocsTestCase):

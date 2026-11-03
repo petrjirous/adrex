@@ -154,10 +154,16 @@ body .adrex-dropdown {
 }
 ```
 
-The dark theme's selectors are more specific again. To change a value that the dark theme also sets, target it directly:
+The dark theme's selectors are more specific again. To change a value that the dark theme also sets, use a selector that matches how you turn dark mode on:
 
 ```css
-html[data-adrex-theme="dark"] .adrex-dropdown {
+/* adrex.configure({ theme: 'dark' }) */
+html[data-adrex-theme="dark"] .adrex-dropdown,
+/* data-adrex-theme="dark" on <body> */
+body[data-adrex-theme="dark"] .adrex-dropdown,
+/* class adrex-theme-dark on <html> or <body> */
+html.adrex-theme-dark .adrex-dropdown,
+body.adrex-theme-dark .adrex-dropdown {
   --adrex-dropdown-bg: #10151c;
 }
 ```

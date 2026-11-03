@@ -238,13 +238,15 @@ kubectl -n adrex get pods
 kubectl -n adrex describe pod <pod-name>
 ```
 
-To work around it, set a non-root user in your copy of those two manifests. The `node:22-slim` base image has a `node` user with UID 1000:
+To work around it, set a non-root `runAsUser` in your copy of those two manifests:
 
 ```yaml
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000
+  runAsUser: <non-root UID>
 ```
+
+> **TBD:** A tested non-root UID for the adrex image. The repo doesn't define one, and this workaround hasn't been run on a cluster.
 
 `k8s/meilisearch-deployment.yaml` also sets `runAsNonRoot: true` with no `runAsUser`. Whether that causes the same problem depends on the Meilisearch image.
 
