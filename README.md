@@ -21,13 +21,16 @@ Self-hosted Czech address autocomplete powered by 3M+ RÚIAN address points.
 - Node.js 22+
 - `unzip` (for extracting RÚIAN data)
 
-### 1. Clone and install
+### 1. Clone, configure and install
 
 ```bash
 git clone https://github.com/petrjirous/adrex.git
 cd adrex
+cp .env.example .env
 npm install
 ```
+
+`docker-compose.yml` needs `MEILI_MASTER_KEY` and `API_KEYS` from `.env`. The `dev-test-key-1` key used below also comes from `.env.example`.
 
 ### 2. Start Meilisearch
 
@@ -60,7 +63,7 @@ Or open the demo page at `http://localhost:8080/demo/index.html` (requires a sta
 
 ### Docker Compose (full stack)
 
-To run both Meilisearch and the API in Docker:
+To run both Meilisearch and the API in Docker (after creating `.env` as in step 1):
 
 ```bash
 docker compose up -d
@@ -101,7 +104,7 @@ Add these classes to `<input>` elements to bind them to the autocomplete:
 
 ### Instance grouping
 
-Add `adrex-instance-{name}` to group fields into separate form instances (e.g., shipping and billing addresses on the same page).
+Add `adrex-instance-{name}` to each `<input>` to group fields into separate form instances (e.g., shipping and billing addresses on the same page).
 
 ### Example: Split fields
 
@@ -181,10 +184,10 @@ instance.destroy();            // remove all listeners, clean up
 
 ### Theming with CSS custom properties
 
-The dropdown is fully customizable via CSS custom properties:
+The dropdown is fully customizable via CSS custom properties. The widget adds its stylesheet after yours, so use a selector more specific than `.adrex-dropdown`:
 
 ```css
-.adrex-dropdown {
+body .adrex-dropdown {
   --adrex-dropdown-bg: #ffffff;
   --adrex-dropdown-border: 1px solid #cccccc;
   --adrex-dropdown-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -210,13 +213,15 @@ Toggle via JavaScript:
 adrex.configure({ theme: 'dark' });
 ```
 
-Or via CSS/HTML -- add `data-adrex-theme="dark"` or class `adrex-theme-dark` to any ancestor element:
+Or via HTML -- add `data-adrex-theme="dark"` to `<body>`, or class `adrex-theme-dark` to `<html>` or `<body>`:
 
 ```html
-<html data-adrex-theme="dark">
+<body data-adrex-theme="dark">
 ```
 
-Set `theme: 'none'` to skip built-in styles entirely and bring your own CSS.
+The dropdown is appended to `document.body`, so only `<html>` and `<body>` count as ancestors. `data-adrex-theme` on `<html>` doesn't work, because the widget overwrites it at load.
+
+`theme: 'none'` doesn't remove the built-in styles: they're injected at script load, before your code can call `configure()`. To restyle the dropdown, override them with more specific selectors. See [Themes](docs/configuration.md#themes).
 
 ## API Reference
 
@@ -298,11 +303,11 @@ No authentication required.
 
 All endpoints except `/health` require a Bearer token or an `apiKey` query parameter.
 
-```
+```text
 Authorization: Bearer your-api-key
 ```
 
-Or: `GET /api/v1/address/autocomplete?apiKey=your-api-key`
+Or: `POST /api/v1/address/autocomplete?apiKey=your-api-key`
 
 Configure valid keys via the `API_KEYS` environment variable (comma-separated).
 
@@ -317,6 +322,7 @@ Configure valid keys via the `API_KEYS` environment variable (comma-separated).
 | `API_KEYS` | *(required)* | Comma-separated valid API keys |
 | `RUIAN_DATA_DIR` | `./data` | Directory for RÚIAN downloads |
 | `RUIAN_CSV_URL` | `auto` | RÚIAN CSV URL (`auto` resolves latest from ČÚZK) |
+| `PIPELINE_BATCH_SIZE` | `10000` | Documents per Meilisearch indexing batch |
 | `RATE_LIMIT_MAX` | `100` | Max requests per window |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window (ms) |
 
@@ -351,7 +357,7 @@ docker --version
 
 Create an A record pointing your domain to the server IP:
 
-```
+```text
 adrex.yourdomain.com  →  A  →  YOUR_SERVER_IP
 ```
 
@@ -408,7 +414,7 @@ Visit `https://adrex.yourdomain.com` to see the demo page.
 - **Persistence**: Meilisearch data is stored in a Docker volume (`meili_data`) -- survives container restarts
 - **Updates**: `git pull && docker compose -f docker-compose.prod.yml up -d --build`
 - **Logs**: `docker compose -f docker-compose.prod.yml logs -f`
-- **Re-index**: Run the pipeline command again -- it will re-download and re-index
+- **Re-index**: Run the pipeline command again -- it will re-download and re-index. It adds or updates addresses but never deletes them
 
 
 ## Kubernetes Deployment
@@ -417,7 +423,7 @@ For production clusters, adrex ships with ready-to-use Kubernetes manifests in [
 
 ### Architecture
 
-```
+```text
 Ingress (TLS) --> Service --> API Deployment (2+ replicas, stateless)
                                    |
                               Meilisearch StatefulSet (1 replica, 20Gi PVC)
@@ -493,11 +499,13 @@ npm run widget:dev   # Widget dev server
 npm run typecheck    # Type checking
 npm run build        # Build API
 npm run widget:build # Build widget
+python3 tools/check_docs.py              # Check the docs
+python3 -m unittest discover -s tests -v # Test the docs checker
 ```
 
 ## Architecture
 
-```
+```text
 RÚIAN CSV (3M rows) --> pipeline --> Meilisearch
                                          |
                         Hono API  <------+
@@ -512,6 +520,10 @@ RÚIAN CSV (3M rows) --> pipeline --> Meilisearch
 
 ## Documentation
 
+- **[Installation](docs/installation.md)** -- Local setup, data import and production deployment
+- **[Usage](docs/usage.md)** -- API calls, widget integration and error reference
+- **[Configuration](docs/configuration.md)** -- Every environment variable, flag, widget option and CSS property
+- **[Troubleshooting](docs/troubleshooting.md)** -- Common errors and how to fix them
 - **[Tutorial](TUTORIAL.md)** -- Step-by-step guide from zero to production
 - **[Kubernetes Deployment](k8s/README.md)** -- Production K8s manifests and instructions
 - **[Contributing](CONTRIBUTING.md)** -- Development setup and PR process
